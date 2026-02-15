@@ -1,45 +1,27 @@
-name: readme-update
+name: scientific-dashboard-update
 
 on:
   schedule:
-    - cron: '0 6 * * *'    # 06:00 UTC — 11:30 AM IST
-    - cron: '0 18 * * *'   # 18:00 UTC — 11:30 PM IST
-  workflow_dispatch:        # manual run from Actions tab
+    - cron: '0 6,18 * * *' # Updates twice daily
+  workflow_dispatch:
 
 jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-feedparser
-
-      - name: install
-        run: pip install feedparser
-
-      - name: run
+      - name: Update Graphics
         env:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
         run: python update_readme.py
-
-      - name: commit
+      - name: Commit Changes
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "SciBot"
+          git config user.email "bot@users.noreply.github.com"
           git add README.md
-          git diff --staged --quiet && echo "no changes" && exit 0
-          git commit -m "readme: update $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git diff --staged --quiet || (git commit -m "update: scientific data" && git push)

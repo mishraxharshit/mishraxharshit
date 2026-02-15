@@ -1,60 +1,39 @@
-# Cognitive Research
+<div align="center">
 
-<img src="https://github-readme-activity-graph.vercel.app/graph?username=mishraxharshit&bg_color=0D1117&color=4FC3F7&line=4FC3F7&point=4FC3F7&area=true&hide_border=true&hide_title=true&hide_legend=true" width="100%" />
-
-Applied researcher. Machine learning × geophysics × scientific computing.
-Open tools and notes from ongoing work.
+</div>
 
 ---
 
-### Latest Preprints — arXiv
+<div align="center">
 
-<!-- ARXIV_TICKER_START -->
-*pending*
-<!-- ARXIV_TICKER_END -->
+<table>
+<tr>
+<td width="50%" align="center" valign="middle">
+<b>SOLAR WIND VELOCITY (km/s)</b><br><br>
+</td>
+<td width="50%" align="center" valign="middle">
+<b>ASTRONOMY PICTURE OF THE DAY</b><br><br>
+</td>
+</tr>
+</table>
 
-<!-- ARXIV_LIST_START -->
-*pending*
-<!-- ARXIV_LIST_END -->
+<table>
+<tr>
+<td width="100%" align="center">
+<b>GLOBAL SEISMIC ACTIVITY (Last 7 Days)</b><br>
+<sub>Y-Axis: Magnitude | X-Axis: Time | Color: Depth</sub><br>
+</td>
+</tr>
+</table>
 
----
+<table>
+<tr>
+<td width="100%" align="center">
+<b>NEAR EARTH OBJECTS (Hazard Probability)</b><br>
+</td>
+</tr>
+</table>
 
-### Astronomy Picture of the Day — NASA APOD
-
-<!-- APOD_START -->
-*pending*
-<!-- APOD_END -->
-
----
-
-### Significant Earthquakes — USGS
-
-M 4.5+ · past 7 days
-
-<!-- USGS_START -->
-*pending*
-<!-- USGS_END -->
-
----
-
-### Space Weather — NOAA SWPC
-
-Solar wind · Geomagnetic conditions
-
-<!-- SWPC_START -->
-*pending*
-<!-- SWPC_END -->
-
----
-
-### Near-Earth Objects — NASA CNEOS
-
-<!-- NEO_START -->
-*pending*
-<!-- NEO_END -->
-
----
-
-<sub>
-arXiv · USGS · NOAA SWPC · NASA APOD · NASA CNEOS — all free, open APIs · updated twice daily
-</sub>
+<img src="https://img.shields.io/badge/SYSTEM-ONLINE-success?style=for-the-badge&logo=github&color=0d1117"/>
+<img src="https://img.shields.io/badge/UPDATE_FREQUENCY-TWICE_DAILY-blue?style=for-the-badge&color=0d1117"/>
+</div>
