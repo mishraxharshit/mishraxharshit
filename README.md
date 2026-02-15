@@ -4,7 +4,7 @@
 
 ![Last Updated](https://img.shields.io/badge/Auto--Updated-Every%206hrs-4FC3F7?style=flat-square&logo=github-actions&logoColor=white)
 ![Made With](https://img.shields.io/badge/Made%20with-Python-3776AB?style=flat-square&logo=python&logoColor=white)
-![Data Sources](https://img.shields.io/badge/Sources-NASA%20·%20USGS%20·%20NOAA%20·%20arXiv-0D1117?style=flat-square)
+![Data Sources](https://img.shields.io/badge/Sources-NASA%20·%20USGS%20·%20NOAA%20·%20arXiv%20·%20IMF-0D1117?style=flat-square)
 
 <!-- START_TIME -->
 <!-- END_TIME -->
@@ -24,16 +24,16 @@
 
 <table width="100%">
 <tr>
-<td width="60%" valign="top">
+<td width="62%" valign="top">
 
 ### 🌋 Global Seismic Activity (M5+)
 <!-- START_EARTHQUAKES -->
 <!-- END_EARTHQUAKES -->
 
 </td>
-<td width="40%" valign="top">
+<td width="38%" valign="top">
 
-### 🛰️ ISS Orbital Position
+### 🛰️ ISS Live Position
 <!-- START_ISS -->
 <!-- END_ISS -->
 
@@ -84,31 +84,31 @@
 
 ---
 
-## 🔬 Science & Mathematics
+## 💹 Global Economics
 
 <table width="100%">
 <tr>
-<td width="35%" valign="top">
+<td width="50%" valign="top">
 
-### 🧬 Medical Research Distribution
-<!-- START_PUBMED -->
-<!-- END_PUBMED -->
+### 📈 GDP Growth Rate (2023)
+<!-- START_GDP -->
+<!-- END_GDP -->
 
 </td>
-<td width="65%" valign="top">
+<td width="50%" valign="top">
 
-### 〰️ Fourier Wave Synthesis
-<!-- START_FOURIER -->
-<!-- END_FOURIER -->
+### 💸 Inflation Rates (2023)
+<!-- START_INFLATION -->
+<!-- END_INFLATION -->
 
 </td>
 </tr>
 <tr>
-<td colspan="2" align="center" valign="top">
+<td colspan="2" valign="top">
 
-### 🌀 Lorenz Attractor
-<!-- START_LORENZ -->
-<!-- END_LORENZ -->
+### ⚖️ Trade Balance — Major Economies
+<!-- START_TRADE -->
+<!-- END_TRADE -->
 
 </td>
 </tr>
@@ -129,7 +129,7 @@
 </td>
 <td width="40%" valign="top">
 
-### 🧪 Protein Structure (RCSB PDB)
+### 🧬 Protein Structure (RCSB PDB)
 <!-- START_PROTEIN -->
 <!-- END_PROTEIN -->
 
@@ -148,9 +148,8 @@
 <div align="center">
 
 **Data Sources:**
-[arXiv](https://arxiv.org) · [USGS](https://earthquake.usgs.gov) · [NASA](https://api.nasa.gov) · [NOAA](https://www.noaa.gov) · [PubMed](https://pubmed.ncbi.nlm.nih.gov) · [Our World in Data](https://ourworldindata.org) · [RCSB PDB](https://www.rcsb.org)
+[arXiv](https://arxiv.org) · [USGS](https://earthquake.usgs.gov) · [NASA APOD](https://apod.nasa.gov) · [NOAA SWPC](https://www.swpc.noaa.gov) · [World Bank](https://data.worldbank.org) · [IMF](https://www.imf.org) · [RCSB PDB](https://www.rcsb.org)
 
 *Auto-updated every 6 hours via GitHub Actions*
 
 </div>
-
