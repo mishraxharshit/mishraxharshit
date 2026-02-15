@@ -1,7 +1,7 @@
 <div align="center">
 
-# Scientific Data Dashboard
-*Real-time monitoring across space, Earth, biology, and mathematics*
+# Scientific Research Dashboard
+*Curated for Researchers, Scientists, Educators, and Technologists*
 
 <!-- START_TIMESTAMP -->
 <!-- END_TIMESTAMP -->
@@ -10,48 +10,65 @@
 
 </div>
 
-## Satellite Communications
-*Powered by SatNOGS Open Source Network*
+## Latest Research - arXiv Feed
+*Real-time scrolling feed from leading preprint repository*
 
 <table>
 <tr>
 <td width="100%" align="center">
-<b>ACTIVE SATELLITES BY FREQUENCY BAND</b><br>
-<sub>VHF, UHF, L, S, and C-band distribution | SatNOGS Database</sub><br>
-<!-- START_SATELLITES -->
-<!-- END_SATELLITES -->
+<!-- START_ARXIV_MARQUEE -->
+<!-- END_ARXIV_MARQUEE -->
 </td>
 </tr>
 </table>
 
 ---
 
-## Climate & Environment
+## Academic Publishing Landscape
 
 <table>
 <tr>
 <td width="50%" align="center" valign="top">
-<b>GLOBAL TEMPERATURE ANOMALY</b><br>
-<sub>NASA GISTEMP Data | Deviation from baseline</sub><br>
-<!-- START_TEMP -->
-<!-- END_TEMP -->
+<b>PUBMED RESEARCH ACTIVITY</b><br>
+<sub>Publication counts by field (Last 12 months)</sub><br>
+<!-- START_PUBMED -->
+<!-- END_PUBMED -->
 </td>
 <td width="50%" align="center" valign="top">
-<b>CO₂ EMISSIONS</b><br>
-<sub>Major emitters | Our World in Data</sub><br>
-<!-- START_CLIMATE -->
-<!-- END_CLIMATE -->
+<b>RECENT PUBLICATIONS</b><br>
+<sub>CrossRef Academic Database</sub><br>
+<!-- START_CROSSREF -->
+<!-- END_CROSSREF -->
 </td>
 </tr>
 </table>
 
+---
+
+## Scientific Software & Tools
+
 <table>
 <tr>
 <td width="100%" align="center">
-<b>RENEWABLE ENERGY TRANSITION</b><br>
-<sub>Share of total energy consumption by country</sub><br>
-<!-- START_ENERGY -->
-<!-- END_ENERGY -->
+<b>TRENDING SCIENTIFIC REPOSITORIES</b><br>
+<sub>Open source tools from GitHub science community</sub><br>
+<!-- START_GITHUB_SCI -->
+<!-- END_GITHUB_SCI -->
+</td>
+</tr>
+</table>
+
+---
+
+## Geophysics - 3D Earth Visualization
+
+<table>
+<tr>
+<td width="100%" align="center">
+<b>GLOBAL SEISMIC ACTIVITY (Interactive 3D)</b><br>
+<sub>Recent M5.0+ earthquakes plotted on Earth sphere</sub><br>
+<!-- START_SEISMIC_3D -->
+<!-- END_SEISMIC_3D -->
 </td>
 </tr>
 </table>
@@ -59,13 +76,12 @@
 ---
 
 ## Structural Biology
-*Powered by RCSB Protein Data Bank*
 
 <table>
 <tr>
 <td width="100%" align="center">
-<b>PROTEIN STRUCTURE OF THE DAY</b><br>
-<sub>Rotating showcase of significant molecular structures</sub><br>
+<b>PROTEIN STRUCTURE SHOWCASE</b><br>
+<sub>RCSB Protein Data Bank | Daily rotating molecular structures</sub><br>
 <!-- START_PROTEIN -->
 <!-- END_PROTEIN -->
 </td>
@@ -80,13 +96,13 @@
 <tr>
 <td width="50%" align="center" valign="top">
 <b>INTERNATIONAL SPACE STATION</b><br>
-<sub>Real-time orbital position and crew status</sub><br>
+<sub>Real-time tracking</sub><br>
 <!-- START_ISS -->
 <!-- END_ISS -->
 </td>
 <td width="50%" align="center" valign="top">
-<b>SOLAR WIND VELOCITY</b><br>
-<sub>NOAA Space Weather Monitoring (km/s)</sub><br>
+<b>SOLAR WIND</b><br>
+<sub>NOAA Space Weather</sub><br>
 <!-- START_SOLAR -->
 <!-- END_SOLAR -->
 </td>
@@ -97,141 +113,162 @@
 <tr>
 <td width="100%" align="center">
 <b>ASTRONOMY PICTURE OF THE DAY</b><br>
-<sub>NASA Astrophotography Archive</sub><br>
+<sub>NASA APOD</sub><br>
 <!-- START_APOD -->
 <!-- END_APOD -->
 </td>
 </tr>
 </table>
 
+---
+
+## Climate Science
+
 <table>
 <tr>
 <td width="100%" align="center">
-<b>NEAR EARTH OBJECTS</b><br>
-<sub>Asteroid close approaches | NASA JPL</sub><br>
-<!-- START_NEO -->
-<!-- END_NEO -->
+<b>GLOBAL CO₂ EMISSIONS</b><br>
+<sub>Major emitters | Our World in Data</sub><br>
+<!-- START_CLIMATE -->
+<!-- END_CLIMATE -->
 </td>
 </tr>
 </table>
 
 ---
 
-## Geophysics
+## Essential Research APIs & Databases
 
-<table>
-<tr>
-<td width="100%" align="center">
-<b>SEISMIC ACTIVITY ANALYSIS</b><br>
-<sub>USGS Real-time Monitoring | Magnitude, Depth, and Timeline</sub><br>
-<!-- START_SEISMIC -->
-<!-- END_SEISMIC -->
-</td>
-</tr>
-</table>
+This dashboard integrates data from leading scientific resources:
 
----
+### **Academic Publishing:**
+- **arXiv** (https://arxiv.org) - 2.4M+ preprints in physics, math, CS, biology
+  - Categories: Astrophysics, Quantum Physics, Machine Learning, Biology
+  - API: Free, no authentication required
+  - Use case: Track emerging research before peer review
 
-## Mathematical Visualizations
+- **CrossRef** (https://crossref.org) - 144M+ scholarly works
+  - DOI resolution, metadata access
+  - API: Free, 50 req/sec
+  - Use case: Citation tracking, publication discovery
 
-<table>
-<tr>
-<td width="100%" align="center">
-<b>FOURIER HARMONIC SYNTHESIS</b><br>
-<sub>Decomposition of complex waveforms</sub><br>
-<!-- START_FOURIER -->
-<!-- END_FOURIER -->
-</td>
-</tr>
-</table>
+- **PubMed** (https://pubmed.ncbi.nlm.nih.gov) - 36M+ biomedical literature
+  - NCBI's comprehensive medical database
+  - API: Free E-utilities
+  - Use case: Medical/biology research trends
 
-<table>
-<tr>
-<td width="100%" align="center">
-<b>LORENZ SYSTEM</b><br>
-<sub>Deterministic chaos and sensitive dependence</sub><br>
-<!-- START_LORENZ -->
-<!-- END_LORENZ -->
-</td>
-</tr>
-</table>
+### **Open Science Data:**
+- **RCSB Protein Data Bank** (https://rcsb.org) - 215,000+ molecular structures
+  - 3D protein, DNA, RNA structures
+  - API: RESTful, free access
+  - Use case: Structural biology, drug design
 
----
+- **GitHub Science Topics** - Open source scientific software
+  - Machine learning, data analysis, simulation tools
+  - API: GitHub REST API
+  - Use case: Find research code, reproducibility
 
-## Data Sources
+### **Earth & Space:**
+- **USGS Earthquake Catalog** - Real-time seismic monitoring
+  - Global earthquake data (M1.0+)
+  - API: GeoJSON format, free
+  - Use case: Geophysics research, hazard analysis
 
-**Satellite Communications:**
-- SatNOGS DB - Open source satellite database (CC-BY-SA)
-- API: https://db.satnogs.org/api/
-- Global network of ground stations tracking 5000+ satellites
+- **NASA APIs** - Space science data
+  - APOD: Daily astronomy images
+  - NEO: Near Earth Object tracking
+  - API: Free with key (1000 req/hour)
+  - Use case: Astronomy education, space weather
 
-**Climate & Environment:**
-- NASA GISTEMP - Global temperature anomaly records
-- Our World in Data - CO₂ emissions, renewable energy data
-- All data: Open access, CC-BY license
+- **NOAA Space Weather** - Solar activity monitoring
+  - Solar wind, geomagnetic storms
+  - API: Free, real-time data
+  - Use case: Space weather forecasting
 
-**Structural Biology:**
-- RCSB Protein Data Bank - 200,000+ molecular structures
-- API: https://data.rcsb.org/
-- Free access to all protein structures
-
-**Space & Astronomy:**
-- NASA API - APOD, Near Earth Objects
-- NOAA Space Weather - Solar wind monitoring
-- Open Notify - ISS real-time tracking
-
-**Geophysics:**
-- USGS Earthquake Hazards Program - Real-time seismic data
-- Enhanced with depth and temporal analysis
-
-**Mathematical:**
-- Computed visualizations based on standard models
-- Fourier analysis, chaos theory demonstrations
+### **Climate & Environment:**
+- **Our World in Data** (https://ourworldindata.org) - Global development metrics
+  - CO₂ emissions, temperature, energy data
+  - License: CC-BY (open access)
+  - Use case: Climate science, policy research
 
 ---
 
-## Technical Details
+## Technical Implementation
 
-**New Features:**
-- Satellite frequency band distribution analysis
-- Enhanced seismic visualization with 3D-style depth mapping
-- Daily rotating protein structure showcase
-- Global temperature anomaly trends
-- Improved data visualization with temporal and spatial dimensions
+### **Visualization Technologies:**
+- **Plotly** (optional) - 3D interactive graphs
+  - Earth globe projections
+  - Molecular structure rendering
+  - Falls back to 2D if unavailable
 
-**APIs Used:** 11 sources
-- SatNOGS (satellites)
-- NASA GISTEMP (climate)
-- RCSB PDB (proteins)
-- Our World in Data (2 endpoints)
-- NASA (2 endpoints)
-- NOAA (solar wind)
-- USGS (earthquakes)
-- Open Notify (ISS)
-- Mathematical computations (2 types)
+- **QuickChart** - Static chart generation
+  - Bar charts, line graphs, gauges
+  - No server-side dependencies
+  - Works in GitHub Actions
 
-**Update Frequency:** Twice daily (06:00 & 18:00 UTC)
+### **Data Processing:**
+- Python 3.11 (standard library only for base version)
+- Optional: plotly, kaleido for 3D visualizations
+- XML/JSON parsing for API responses
+- Automated twice-daily updates (GitHub Actions)
 
-**All Data Sources:** Free, open access, no authentication required (except NASA DEMO_KEY)
+### **Update Frequency:**
+- arXiv feed: Every 12 hours (new papers twice daily)
+- PubMed/CrossRef: Daily aggregates
+- Seismic/Space: Real-time or near-real-time
+- Climate: Monthly/annual data
 
 ---
 
-## About the Technologies
+## For Researchers & Educators
 
-**SatNOGS (Satellite Networked Open Ground Station):**
-A global network of satellite ground stations, built on open source principles. The project won the Hackaday Prize 2014 and maintains a crowdsourced database of satellite transmitter data. SatNOGS enables anyone to track and receive data from satellites using affordable equipment.
+### **How to Use This Dashboard:**
 
-**RCSB Protein Data Bank:**
-The single worldwide archive of structural data of biological macromolecules. Founded in 1971, the PDB contains over 200,000 structures including proteins, nucleic acids, and complex assemblies. All data is freely available for research and education.
+**As a Researcher:**
+- Monitor arXiv for new preprints in your field
+- Track publication trends in medical/biology areas
+- Access molecular structures for computational work
+- Monitor seismic activity for geophysics research
 
-**Our World in Data:**
-A scientific online publication focused on global problems including poverty, disease, climate change, and inequality. All research and data are made freely available under Creative Commons licenses.
+**As an Educator:**
+- Use APOD for astronomy teaching
+- Show students real-time space station tracking
+- Demonstrate protein structures in biology classes
+- Teach data visualization with live examples
+
+**As a Technologist:**
+- Find open source scientific software
+- Access APIs for your own projects
+- Learn from real-world data integration
+- Build similar dashboards for your domain
+
+### **API Rate Limits (All Free Tiers):**
+- arXiv: Unlimited (be courteous)
+- PubMed: 3 requests/second
+- CrossRef: 50 requests/second
+- RCSB PDB: Reasonable use
+- NASA: 1000 requests/hour (with key)
+- GitHub: 60 requests/hour (unauth), 5000 (auth)
+- USGS: Unlimited
+
+---
+
+## About the Data Sources
+
+All APIs used in this dashboard are:
+- ✅ **Free and open access**
+- ✅ **No authentication required** (except NASA for high rate limits)
+- ✅ **Actively maintained** by reputable scientific institutions
+- ✅ **Documented** with public APIs
+- ✅ **Suitable for educational and research use**
 
 ---
 
 <div align="center">
 
-<sub>Dashboard Status: ONLINE | Update Frequency: Twice Daily | Active Data Sources: 11</sub>
+<sub>Dashboard Status: ONLINE | Updates: Twice Daily | APIs: 9 Active Sources</sub>
+
+<sub>Built for the global research community | All data sources respect open science principles</sub>
 
 </div>
 

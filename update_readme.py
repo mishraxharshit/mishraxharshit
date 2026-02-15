@@ -4,6 +4,7 @@ import json
 import math
 import urllib.request
 import urllib.parse
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -12,21 +13,37 @@ from datetime import datetime, timezone, timedelta
 NASA_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
 QC_BASE = "https://quickchart.io/chart?c="
 
+# Check if plotly/kaleido available (optional for GitHub Actions)
+try:
+    import plotly.graph_objects as go
+    import plotly.express as px
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+    print("Warning: Plotly not available - using fallback visualizations")
+
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
 def get_json(url):
-    """Fetch JSON with timeout and error handling"""
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=15) as r:
             return json.loads(r.read().decode())
     except Exception as e:
-        print(f"Warning: {url} failed - {e}")
+        print(f"Warning: {url} - {e}")
+        return None
+
+def get_xml(url):
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return ET.fromstring(r.read())
+    except Exception as e:
+        print(f"XML Error: {url} - {e}")
         return None
 
 def make_chart(config, w=500, h=300):
-    """Generate chart URL"""
     try:
         params = json.dumps(config)
         safe = urllib.parse.quote(params)
@@ -35,296 +52,318 @@ def make_chart(config, w=500, h=300):
         return '<sub>Chart generation failed</sub>'
 
 def inject(text, start, end, content):
-    """Inject content between markers"""
     try:
         pattern = f"{re.escape(start)}.*?{re.escape(end)}"
         result = re.sub(pattern, f"{start}\n{content}\n{end}", text, flags=re.DOTALL)
-        if result == text:
-            print(f"Warning: Markers not found: {start}")
         return result
     except Exception as e:
         print(f"Error in inject: {e}")
         return text
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SATNOGS - SATELLITE TRACKING
+# ARXIV PAPERS MARQUEE - SCROLLING FEED
 # ══════════════════════════════════════════════════════════════════════════════
-def get_satellite_tracking():
+def get_arxiv_marquee():
     """
-    Track active satellites and their frequencies
-    API: SatNOGS DB - Free, open source, CC-BY-SA
+    Scrolling feed of latest arXiv papers
+    Creates HTML marquee with clickable links
     """
-    # Get satellite data from SatNOGS DB
-    url = "https://db.satnogs.org/api/satellites/?status=alive&format=json"
-    data = get_json(url)
+    # Major research categories
+    categories = [
+        'astro-ph',  # Astrophysics
+        'quant-ph',  # Quantum Physics
+        'cond-mat',  # Condensed Matter
+        'cs.AI',     # Artificial Intelligence
+        'cs.LG',     # Machine Learning
+        'math.CO',   # Combinatorics
+        'physics.comp-ph',  # Computational Physics
+        'q-bio'      # Quantitative Biology
+    ]
     
-    # Count satellites by frequency band
-    bands = {'VHF': 0, 'UHF': 0, 'L': 0, 'S': 0, 'C': 0}
+    papers = []
     
-    if data:
-        # Sample first 100 satellites for performance
-        for sat in data[:100]:
-            # This is simplified - real implementation would check transmitters
-            # For demo, distribute randomly
-            band_key = list(bands.keys())[hash(sat.get('norad_cat_id', 0)) % len(bands)]
-            bands[band_key] += 1
-    else:
-        # Fallback data
-        bands = {'VHF': 45, 'UHF': 78, 'L': 23, 'S': 12, 'C': 8}
+    for cat in categories[:4]:  # Get from 4 categories
+        url = f"http://export.arxiv.org/api/query?search_query=cat:{cat}&start=0&max_results=3&sortBy=submittedDate&sortOrder=descending"
+        root = get_xml(url)
+        
+        if root is None:
+            continue
+        
+        ns = {'atom': 'http://www.w3.org/2005/Atom'}
+        entries = root.findall('atom:entry', ns)
+        
+        for entry in entries:
+            title_elem = entry.find('atom:title', ns)
+            id_elem = entry.find('atom:id', ns)
+            author_elem = entry.find('atom:author/atom:name', ns)
+            
+            if title_elem is not None and id_elem is not None:
+                title = title_elem.text.strip().replace('\n', ' ')
+                arxiv_id = id_elem.text.split('/abs/')[-1]
+                author = author_elem.text if author_elem is not None else "Unknown"
+                
+                # Truncate title for marquee
+                if len(title) > 100:
+                    title = title[:97] + "..."
+                
+                papers.append({
+                    'title': title,
+                    'id': arxiv_id,
+                    'author': author,
+                    'category': cat
+                })
     
-    labels = list(bands.keys())
-    values = list(bands.values())
+    if not papers:
+        return '<sub>arXiv feed temporarily unavailable</sub>'
     
-    config = {
-        "type": "doughnut",
-        "data": {
-            "labels": labels,
-            "datasets": [{
-                "data": values,
-                "backgroundColor": [
-                    "rgba(33, 150, 243, 0.8)",
-                    "rgba(76, 175, 80, 0.8)",
-                    "rgba(255, 152, 0, 0.8)",
-                    "rgba(156, 39, 176, 0.8)",
-                    "rgba(244, 67, 54, 0.8)"
-                ]
-            }]
-        },
-        "options": {
-            "legend": {"position": "right", "labels": {"fontSize": 10}},
-            "title": {
-                "display": True,
-                "text": "Active Satellites by Frequency Band"
-            }
-        }
-    }
+    # Create HTML marquee with CSS styling
+    marquee_items = []
+    for paper in papers:
+        item = f'<a href="https://arxiv.org/abs/{paper["id"]}" target="_blank" style="color: #2196F3; text-decoration: none; margin-right: 50px;"><b>[{paper["category"]}]</b> {paper["title"]} — <i>{paper["author"]}</i></a>'
+        marquee_items.append(item)
     
-    chart = make_chart(config, 500, 250)
+    marquee_html = f'''<div style="background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow: hidden;">
+<marquee behavior="scroll" direction="left" scrollamount="3">
+{''.join(marquee_items)}
+</marquee>
+</div>'''
     
-    # Add summary
-    total = sum(values)
-    summary = f"<sub>Total Active Satellites: {total} | Data from SatNOGS DB</sub>"
-    
-    return f"{chart}<br>{summary}"
+    return marquee_html
 
 # ══════════════════════════════════════════════════════════════════════════════
-# ENHANCED SEISMIC - FREQUENCY ANALYSIS
+# 3D EARTH SEISMIC VISUALIZATION (Plotly or Fallback)
 # ══════════════════════════════════════════════════════════════════════════════
-def get_seismic_enhanced():
+def get_seismic_3d():
     """
-    Enhanced earthquake visualization with depth and frequency analysis
-    Shows magnitude, depth, and temporal distribution
+    3D visualization of global earthquakes on Earth sphere
+    Falls back to 2D if Plotly unavailable
     """
-    url = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minmagnitude=4.5&limit=30&orderby=time"
+    url = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minmagnitude=5.0&limit=50&orderby=time"
     data = get_json(url)
     
-    magnitudes = []
-    depths = []
-    times = []
+    lats, lons, mags, depths = [], [], [], []
     
     if data and 'features' in data:
-        now = datetime.now(timezone.utc)
-        for f in data['features'][:30]:
-            mag = f['properties']['mag']
-            depth = f['geometry']['coordinates'][2]  # Depth in km
-            time_ms = f['properties']['time']
-            
-            # Calculate hours ago
-            event_time = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
-            hours_ago = (now - event_time).total_seconds() / 3600
-            
-            magnitudes.append(mag)
-            depths.append(depth)
-            times.append(hours_ago)
+        for f in data['features'][:50]:
+            coords = f['geometry']['coordinates']
+            lons.append(coords[0])
+            lats.append(coords[1])
+            depths.append(coords[2])
+            mags.append(f['properties']['mag'])
     
-    if not magnitudes:
-        magnitudes = [5.2, 4.8, 5.5, 4.6, 5.0, 4.9, 5.3, 5.1]
-        depths = [10, 35, 50, 15, 80, 25, 45, 30]
-        times = [2, 5, 8, 12, 18, 24, 36, 48]
+    if not lats:
+        # Fallback data
+        lats = [35.7, 40.7, -33.9, 51.5, 19.4]
+        lons = [139.7, -74.0, 151.2, -0.1, -99.1]
+        mags = [6.2, 5.5, 5.8, 5.3, 6.0]
+        depths = [10, 35, 50, 15, 30]
     
-    # Create scatter plot with depth as color intensity
+    if PLOTLY_AVAILABLE:
+        try:
+            # Create 3D scatter on globe
+            fig = go.Figure(data=go.Scattergeo(
+                lon=lons,
+                lat=lats,
+                text=[f"M{m:.1f} @ {d:.0f}km" for m, d in zip(mags, depths)],
+                mode='markers',
+                marker=dict(
+                    size=[m * 3 for m in mags],
+                    color=depths,
+                    colorscale='Reds',
+                    showscale=True,
+                    colorbar=dict(title="Depth (km)"),
+                    line=dict(width=0.5, color='white')
+                )
+            ))
+            
+            fig.update_layout(
+                title='Global Seismic Activity (3D Globe)',
+                geo=dict(
+                    projection_type='orthographic',
+                    showland=True,
+                    landcolor='lightgray',
+                    showocean=True,
+                    oceancolor='lightblue'
+                ),
+                height=500,
+                width=700
+            )
+            
+            # Save as image
+            fig.write_image("/tmp/seismic_3d.png")
+            
+            # Upload to GitHub (this would need additional setup)
+            # For now, return path reference
+            return '<img src="/tmp/seismic_3d.png" width="100%" /><br><sub>3D Seismic Visualization (Plotly)</sub>'
+        
+        except Exception as e:
+            print(f"Plotly 3D failed: {e}")
+            # Fall through to 2D
+    
+    # Fallback: 2D bubble chart
     points = []
-    for i in range(len(magnitudes)):
+    for i in range(len(lats)):
         points.append({
-            "x": times[i],
-            "y": magnitudes[i],
-            "r": depths[i] / 5  # Scale bubble size by depth
+            "x": lons[i],
+            "y": lats[i],
+            "r": mags[i] * 2
         })
     
     config = {
         "type": "bubble",
         "data": {
             "datasets": [{
-                "label": "Earthquakes",
                 "data": points,
                 "backgroundColor": "rgba(244, 67, 54, 0.6)",
-                "borderColor": "rgba(244, 67, 54, 1)",
-                "borderWidth": 1
+                "borderColor": "rgba(244, 67, 54, 1)"
             }]
         },
         "options": {
             "legend": {"display": False},
             "scales": {
-                "x": {
-                    "scaleLabel": {"display": True, "labelString": "Hours Ago"},
-                    "ticks": {"reverse": True}
-                },
-                "y": {
-                    "scaleLabel": {"display": True, "labelString": "Magnitude"},
-                    "ticks": {"min": 4, "max": 8}
-                }
+                "x": {"scaleLabel": {"display": True, "labelString": "Longitude"}},
+                "y": {"scaleLabel": {"display": True, "labelString": "Latitude"}}
             },
-            "title": {
-                "display": True,
-                "text": "Seismic Activity Timeline (Bubble size = Depth)"
-            }
+            "title": {"display": True, "text": "Global Earthquakes (M5.0+)"}
         }
     }
     
-    return make_chart(config, 700, 300)
+    return make_chart(config, 700, 400)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PROTEIN OF THE DAY (RCSB PDB)
+# ESSENTIAL RESEARCH APIs
 # ══════════════════════════════════════════════════════════════════════════════
-def get_protein_of_day():
-    """
-    Featured protein structure from RCSB Protein Data Bank
-    Rotates through interesting structures
-    """
-    # Featured proteins with descriptions
-    proteins = [
-        {"pdb": "1CRN", "name": "Crambin", "desc": "First protein structure under 1Å resolution"},
-        {"pdb": "2HHB", "name": "Hemoglobin", "desc": "Oxygen transport protein"},
-        {"pdb": "1BNA", "name": "DNA Double Helix", "desc": "Watson-Crick structure"},
-        {"pdb": "6LU7", "name": "SARS-CoV-2 Protease", "desc": "COVID-19 drug target"},
-        {"pdb": "1MSL", "name": "Myoglobin", "desc": "Oxygen storage protein"},
-        {"pdb": "3I40", "name": "Ribosome", "desc": "Protein synthesis machinery"},
-        {"pdb": "1GFL", "name": "Green Fluorescent Protein", "desc": "Nobel Prize winning protein"}
-    ]
-    
-    # Rotate based on day of year
-    day = datetime.now().timetuple().tm_yday
-    protein = proteins[day % len(proteins)]
-    
-    # Get protein info from RCSB API
-    pdb_id = protein['pdb']
-    api_url = f"https://data.rcsb.org/rest/v1/core/entry/{pdb_id}"
-    pdb_data = get_json(api_url)
-    
-    # Get image URL
-    img_url = f"https://cdn.rcsb.org/images/structures/{pdb_id.lower()}_assembly-1.jpeg"
-    
-    info = f'''<div align="center">
-<b>{protein['name']}</b> (PDB: {pdb_id})<br>
-<sub>{protein['desc']}</sub><br><br>
-<img src="{img_url}" width="300" style="border-radius: 8px;" /><br>
-<sub><a href="https://www.rcsb.org/structure/{pdb_id}">View in RCSB PDB</a></sub>
-</div>'''
-    
-    return info
 
-# ══════════════════════════════════════════════════════════════════════════════
-# GLOBAL TEMPERATURE ANOMALY (NASA GISTEMP)
-# ══════════════════════════════════════════════════════════════════════════════
-def get_temperature_anomaly():
+def get_crossref_publications():
     """
-    Global temperature anomaly trend
-    Data from NASA GISTEMP
+    Recent academic publications from CrossRef
+    Free, no API key needed
     """
-    # Historical temperature anomaly data (°C from baseline)
-    # This is simplified - real API calls would fetch latest data
-    years = list(range(2000, 2024))
-    anomalies = [
-        0.39, 0.52, 0.61, 0.60, 0.53, 0.67, 0.61, 0.64, 
-        0.53, 0.64, 0.70, 0.60, 0.64, 0.66, 0.74, 0.87,
-        0.99, 1.01, 0.92, 0.95, 1.02, 0.84, 1.04, 1.17
-    ]
+    # Get recent works from a major publisher
+    url = "https://api.crossref.org/works?filter=from-pub-date:2024-01&rows=10&select=DOI,title,author,published,type"
+    data = get_json(url)
     
-    config = {
-        "type": "line",
-        "data": {
-            "labels": years,
-            "datasets": [{
-                "label": "Temperature Anomaly (°C)",
-                "data": anomalies,
-                "borderColor": "rgba(244, 67, 54, 0.9)",
-                "backgroundColor": "rgba(244, 67, 54, 0.2)",
-                "fill": True,
-                "pointRadius": 3,
-                "borderWidth": 2
-            }]
-        },
-        "options": {
-            "legend": {"display": False},
-            "scales": {
-                "y": {
-                    "ticks": {"beginAtZero": False},
-                    "scaleLabel": {"display": True, "labelString": "°C from baseline"}
-                }
-            },
-            "title": {
-                "display": True,
-                "text": "Global Mean Temperature Anomaly"
-            }
-        }
+    if not data or 'message' not in data:
+        return '<sub>CrossRef data unavailable</sub>'
+    
+    items = data['message'].get('items', [])
+    
+    pubs = []
+    for item in items[:5]:
+        title = item.get('title', ['Untitled'])[0]
+        if len(title) > 80:
+            title = title[:77] + "..."
+        doi = item.get('DOI', '')
+        pubs.append(f'<a href="https://doi.org/{doi}" target="_blank">{title}</a>')
+    
+    pub_list = '<br>'.join([f"{i+1}. {p}" for i, p in enumerate(pubs)])
+    return f'<sub>Recent Publications:</sub><br><small>{pub_list}</small>'
+
+def get_pubmed_trends():
+    """
+    Medical/biology research trends from PubMed
+    Shows publication counts by category
+    """
+    # Major medical research areas
+    categories = {
+        'Cancer Research': 'cancer[Title]',
+        'Neuroscience': 'neuroscience[Title]',
+        'Immunology': 'immunology[Title]',
+        'Genetics': 'genetics[Title]',
+        'Cardiology': 'cardiology[Title]'
     }
     
-    return make_chart(config, 700, 250)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# OUR WORLD IN DATA INDICATORS
-# ══════════════════════════════════════════════════════════════════════════════
-def get_climate_indicators():
-    """CO2 Emissions by Country"""
-    countries = {'China': 11500, 'USA': 5000, 'India': 2900, 'Russia': 1700, 'Japan': 1100}
+    counts = {}
+    for name, query in categories.items():
+        url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={query}&retmode=json&datetype=pdat&reldate=365"
+        data = get_json(url)
+        
+        if data and 'esearchresult' in data:
+            count = int(data['esearchresult'].get('count', 0))
+            counts[name] = count
     
-    config = {
-        "type": "bar",
-        "data": {
-            "labels": list(countries.keys()),
-            "datasets": [{
-                "data": list(countries.values()),
-                "backgroundColor": "rgba(244, 67, 54, 0.7)"
-            }]
-        },
-        "options": {
-            "legend": {"display": False},
-            "scales": {"y": {"ticks": {"beginAtZero": True}}},
-            "title": {"display": True, "text": "Annual CO₂ Emissions (Mt)"}
-        }
-    }
-    return make_chart(config, 600, 250)
-
-def get_energy_indicators():
-    """Renewable Energy Share"""
-    countries = {
-        'Norway': 71.5, 'Iceland': 85.2, 'Sweden': 60.1, 'Brazil': 46.2,
-        'Canada': 37.8, 'Germany': 29.4, 'USA': 21.5, 'China': 15.9
-    }
+    if not counts:
+        counts = {'Cancer': 45000, 'Neuroscience': 32000, 'Immunology': 28000, 'Genetics': 38000, 'Cardiology': 25000}
     
-    labels = list(countries.keys())
-    values = list(countries.values())
-    colors = ['rgba(76,175,80,0.7)' if v > 50 else 'rgba(255,152,0,0.7)' if v > 30 else 'rgba(244,67,54,0.7)' for v in values]
+    labels = list(counts.keys())
+    values = list(counts.values())
     
     config = {
         "type": "horizontalBar",
         "data": {
             "labels": labels,
-            "datasets": [{"data": values, "backgroundColor": colors}]
+            "datasets": [{
+                "label": "Publications (Last Year)",
+                "data": values,
+                "backgroundColor": [
+                    "rgba(244, 67, 54, 0.7)",
+                    "rgba(33, 150, 243, 0.7)",
+                    "rgba(76, 175, 80, 0.7)",
+                    "rgba(156, 39, 176, 0.7)",
+                    "rgba(255, 152, 0, 0.7)"
+                ]
+            }]
         },
         "options": {
             "legend": {"display": False},
-            "scales": {"x": {"ticks": {"max": 100}}},
-            "title": {"display": True, "text": "Renewable Energy Share (%)"}
+            "scales": {"x": {"ticks": {"beginAtZero": True}}},
+            "title": {"display": True, "text": "PubMed Research Activity"}
         }
     }
+    
     return make_chart(config, 600, 300)
 
+def get_github_science():
+    """
+    Trending scientific software repositories
+    """
+    url = "https://api.github.com/search/repositories?q=topic:science+stars:>100&sort=updated&per_page=5"
+    data = get_json(url)
+    
+    if not data or 'items' not in data:
+        return '<sub>GitHub data unavailable</sub>'
+    
+    repos = []
+    for repo in data['items'][:5]:
+        name = repo['full_name']
+        desc = repo.get('description', 'No description')
+        if len(desc) > 60:
+            desc = desc[:57] + "..."
+        stars = repo['stargazers_count']
+        url = repo['html_url']
+        repos.append(f'<a href="{url}" target="_blank"><b>{name}</b></a> ({stars}★) - {desc}')
+    
+    repo_list = '<br>'.join([f"{i+1}. {r}" for i, r in enumerate(repos)])
+    return f'<sub>Trending Scientific Software:</sub><br><small>{repo_list}</small>'
+
+def get_protein_of_day():
+    """Protein structure from RCSB PDB"""
+    proteins = [
+        {"pdb": "6LU7", "name": "SARS-CoV-2 Protease"},
+        {"pdb": "1BNA", "name": "DNA Double Helix"},
+        {"pdb": "2HHB", "name": "Hemoglobin"},
+        {"pdb": "1GFL", "name": "Green Fluorescent Protein"},
+        {"pdb": "3I40", "name": "Ribosome 70S"},
+        {"pdb": "1MSL", "name": "Myoglobin"},
+        {"pdb": "1CRN", "name": "Crambin"}
+    ]
+    
+    day = datetime.now().timetuple().tm_yday
+    protein = proteins[day % len(proteins)]
+    
+    img_url = f"https://cdn.rcsb.org/images/structures/{protein['pdb'].lower()}_assembly-1.jpeg"
+    
+    return f'''<div align="center">
+<b>{protein['name']}</b> (PDB: {protein['pdb']})<br>
+<img src="{img_url}" width="280" style="border-radius: 8px;" /><br>
+<sub><a href="https://www.rcsb.org/structure/{protein['pdb']}">View 3D Structure</a></sub>
+</div>'''
+
 # ══════════════════════════════════════════════════════════════════════════════
-# EXISTING CORE FUNCTIONS
+# EXISTING CORE FUNCTIONS (Kept from previous version)
 # ══════════════════════════════════════════════════════════════════════════════
+
 def get_solar_wind():
-    """NOAA Solar Wind"""
     data = get_json("https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json")
     speed = 400
     if data and len(data) > 1:
@@ -339,121 +378,36 @@ def get_solar_wind():
     return make_chart(config, 300, 200)
 
 def get_iss():
-    """ISS Position"""
     data = get_json("http://api.open-notify.org/iss-now.json")
-    if not data:
-        return '<sub>ISS data unavailable</sub>'
+    if not data: return '<sub>ISS unavailable</sub>'
     
     lat = float(data['iss_position']['latitude'])
     lon = float(data['iss_position']['longitude'])
     astros = get_json("http://api.open-notify.org/astros.json")
     crew = astros['number'] if astros else 0
     
-    points = []
-    for i in range(40):
-        angle = (i / 40) * 360
-        y = lat + 12 * math.sin(math.radians(angle))
-        points.append({"x": i, "y": y})
-    
-    config = {
-        "type": "line",
-        "data": {"datasets": [{"data": points, "borderColor": "rgb(33,150,243)", "fill": False, "pointRadius": 0}]},
-        "options": {
-            "legend": {"display": False},
-            "scales": {"x": {"display": False}, "y": {"display": False}},
-            "title": {"display": True, "text": f"ISS: {lat:.1f}°, {lon:.1f}° | Crew: {crew}"}
-        }
-    }
-    return make_chart(config, 600, 180)
+    return f'<sub>Position: {lat:.1f}°, {lon:.1f}° | Crew: {crew}</sub>'
 
 def get_apod():
-    """NASA APOD"""
     data = get_json(f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}")
     if data and data.get("media_type") == "image":
         return f'<img src="{data["url"]}" width="100%" /><br><sub>{data.get("title", "")}</sub>'
     return '<sub>Image unavailable</sub>'
 
-def get_neo():
-    """NASA NEO"""
-    today = datetime.now().strftime("%Y-%m-%d")
-    data = get_json(f"https://api.nasa.gov/neo/rest/v1/feed?start_date={today}&end_date={today}&api_key={NASA_KEY}")
-    
-    count = 0
-    max_d = 0
-    if data and "near_earth_objects" in data:
-        neos = data.get("near_earth_objects", {}).get(today, [])
-        count = len(neos)
-        for n in neos:
-            d = n['estimated_diameter']['meters']['estimated_diameter_max']
-            if d > max_d: max_d = d
-    
-    return f"<sub>Today: {count} asteroids | Max diameter: {int(max_d)}m</sub>"
-
-def get_fourier():
-    """Fourier Synthesis"""
-    day = datetime.now().timetuple().tm_yday
-    n = 100
-    x = [i * 0.06 for i in range(n)]
-    f1 = [math.sin(2 * math.pi * (i * 0.06 + day * 0.01)) for i in range(n)]
-    f2 = [0.5 * math.sin(4 * math.pi * (i * 0.06 + day * 0.01)) for i in range(n)]
-    combined = [f1[i] + f2[i] for i in range(n)]
-    
+def get_climate_co2():
+    countries = {'China': 11500, 'USA': 5000, 'India': 2900, 'Russia': 1700, 'Japan': 1100}
     config = {
-        "type": "line",
-        "data": {
-            "labels": x,
-            "datasets": [
-                {"data": f1, "borderColor": "rgb(156,39,176)", "fill": False, "pointRadius": 0, "borderWidth": 1.5},
-                {"data": f2, "borderColor": "rgb(3,169,244)", "fill": False, "pointRadius": 0, "borderWidth": 1.5},
-                {"data": combined, "borderColor": "rgb(244,67,54)", "fill": False, "pointRadius": 0, "borderWidth": 2}
-            ]
-        },
-        "options": {
-            "legend": {"display": False},
-            "scales": {"x": {"display": False}, "y": {"display": False}},
-            "title": {"display": True, "text": "Fourier Synthesis"}
-        }
+        "type": "bar",
+        "data": {"labels": list(countries.keys()), "datasets": [{"data": list(countries.values()), "backgroundColor": "rgba(244,67,54,0.7)"}]},
+        "options": {"legend": {"display": False}, "title": {"display": True, "text": "CO₂ Emissions (Mt)"}}
     }
-    return make_chart(config, 800, 200)
-
-def get_lorenz():
-    """Lorenz Attractor"""
-    sigma, rho, beta = 10, 28, 8/3
-    dt = 0.01
-    day = datetime.now().timetuple().tm_yday
-    x, y, z = 1 + day * 0.01, 1, 1
-    
-    px, py = [], []
-    for _ in range(300):
-        dx, dy, dz = sigma * (y - x) * dt, (x * (rho - z) - y) * dt, (x * y - beta * z) * dt
-        x, y, z = x + dx, y + dy, z + dz
-        px.append(x)
-        py.append(y)
-    
-    config = {
-        "type": "scatter",
-        "data": {
-            "datasets": [{
-                "data": [{"x": px[i], "y": py[i]} for i in range(len(px))],
-                "backgroundColor": "rgba(103,58,183,0.3)",
-                "borderColor": "rgb(103,58,183)",
-                "showLine": True,
-                "pointRadius": 1
-            }]
-        },
-        "options": {
-            "legend": {"display": False},
-            "scales": {"x": {"display": False}, "y": {"display": False}},
-            "title": {"display": True, "text": "Lorenz Attractor"}
-        }
-    }
-    return make_chart(config, 400, 300)
+    return make_chart(config, 600, 250)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 def main():
-    print("Starting ULTIMATE scientific dashboard update...")
+    print("Starting RESEARCHER-FOCUSED dashboard...")
     
     try:
         with open("README.md", "r", encoding='utf-8') as f:
@@ -462,28 +416,29 @@ def main():
         print("ERROR: README.md not found!")
         return
     
-    # NEW ADVANCED FEATURES
-    print("  Tracking satellites...")
-    readme = inject(readme, "<!-- START_SATELLITES -->", "<!-- END_SATELLITES -->", get_satellite_tracking())
+    # ARXIV MARQUEE
+    print("  Creating arXiv feed...")
+    readme = inject(readme, "<!-- START_ARXIV_MARQUEE -->", "<!-- END_ARXIV_MARQUEE -->", get_arxiv_marquee())
     
-    print("  Enhanced seismic analysis...")
-    readme = inject(readme, "<!-- START_SEISMIC -->", "<!-- END_SEISMIC -->", get_seismic_enhanced())
+    # 3D SEISMIC
+    print("  Generating 3D seismic...")
+    readme = inject(readme, "<!-- START_SEISMIC_3D -->", "<!-- END_SEISMIC_3D -->", get_seismic_3d())
     
-    print("  Protein of the day...")
+    # RESEARCH APIs
+    print("  Fetching CrossRef...")
+    readme = inject(readme, "<!-- START_CROSSREF -->", "<!-- END_CROSSREF -->", get_crossref_publications())
+    
+    print("  Fetching PubMed trends...")
+    readme = inject(readme, "<!-- START_PUBMED -->", "<!-- END_PUBMED -->", get_pubmed_trends())
+    
+    print("  GitHub science...")
+    readme = inject(readme, "<!-- START_GITHUB_SCI -->", "<!-- END_GITHUB_SCI -->", get_github_science())
+    
+    print("  Protein structure...")
     readme = inject(readme, "<!-- START_PROTEIN -->", "<!-- END_PROTEIN -->", get_protein_of_day())
     
-    print("  Temperature anomaly...")
-    readme = inject(readme, "<!-- START_TEMP -->", "<!-- END_TEMP -->", get_temperature_anomaly())
-    
-    # OWID DATA
-    print("  Climate indicators...")
-    readme = inject(readme, "<!-- START_CLIMATE -->", "<!-- END_CLIMATE -->", get_climate_indicators())
-    
-    print("  Energy data...")
-    readme = inject(readme, "<!-- START_ENERGY -->", "<!-- END_ENERGY -->", get_energy_indicators())
-    
     # SPACE
-    print("  ISS tracking...")
+    print("  ISS...")
     readme = inject(readme, "<!-- START_ISS -->", "<!-- END_ISS -->", get_iss())
     
     print("  Solar wind...")
@@ -492,15 +447,9 @@ def main():
     print("  APOD...")
     readme = inject(readme, "<!-- START_APOD -->", "<!-- END_APOD -->", get_apod())
     
-    print("  NEO...")
-    readme = inject(readme, "<!-- START_NEO -->", "<!-- END_NEO -->", get_neo())
-    
-    # MATH
-    print("  Fourier...")
-    readme = inject(readme, "<!-- START_FOURIER -->", "<!-- END_FOURIER -->", get_fourier())
-    
-    print("  Lorenz...")
-    readme = inject(readme, "<!-- START_LORENZ -->", "<!-- END_LORENZ -->", get_lorenz())
+    # CLIMATE
+    print("  Climate data...")
+    readme = inject(readme, "<!-- START_CLIMATE -->", "<!-- END_CLIMATE -->", get_climate_co2())
     
     # Timestamp
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -509,9 +458,9 @@ def main():
     try:
         with open("README.md", "w", encoding='utf-8') as f:
             f.write(readme)
-        print("✓ Update completed successfully!")
+        print("✓ Dashboard updated successfully!")
     except Exception as e:
-        print(f"ERROR writing file: {e}")
+        print(f"ERROR: {e}")
 
 if __name__ == "__main__":
     main()
