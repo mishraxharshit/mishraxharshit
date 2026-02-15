@@ -1,27 +1,52 @@
-name: scientific-dashboard-update
+name: Scientific Dashboard Update
 
 on:
   schedule:
-    - cron: '0 6,18 * * *' # Updates twice daily
+    # Runs twice daily at 06:00 and 18:00 UTC
+    - cron: '0 6,18 * * *'
+  
   workflow_dispatch:
 
 jobs:
-  update:
+  update-dashboard:
     runs-on: ubuntu-latest
+    
     permissions:
       contents: write
+    
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Update Graphics
+      
+      - name: Update Scientific Dashboard
         env:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
-        run: python update_readme.py
+        run: |
+          echo "Starting scientific data update..."
+          python update_readme_professional.py
+          echo "Update completed successfully"
+      
       - name: Commit Changes
         run: |
-          git config user.name "SciBot"
-          git config user.email "bot@users.noreply.github.com"
+          git config user.name "Scientific Dashboard Bot"
+          git config user.email "dashboard@users.noreply.github.com"
           git add README.md
-          git diff --staged --quiet || (git commit -m "update: scientific data" && git push)
+          
+          if git diff --staged --quiet; then
+            echo "No changes detected"
+          else
+            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+            git commit -m "Update: Scientific data refresh - $TIMESTAMP"
+            git push
+            echo "Changes committed and pushed"
+          fi
+      
+      - name: Report Status
+        if: failure()
+        run: |
+          echo "Dashboard update failed - check logs for details"
