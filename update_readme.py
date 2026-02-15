@@ -90,7 +90,7 @@ def get_global_earthquakes_map():
             "scales": {"x": {"min": -180, "max": 180}, "y": {"min": -90, "max": 90}}
         }
     }
-    return make_chart(config, 800, 400)
+    return make_chart(config, 600, 300)
 
 # FIX 2: open-notify.org ISS API is defunct. Use wheretheiss.at instead.
 def get_iss_orbit_visual():
@@ -112,7 +112,7 @@ def get_iss_orbit_visual():
             "scales": {"x": {"min": -180, "max": 180}, "y": {"min": -90, "max": 90}}
         }
     }
-    return make_chart(config, 500, 350)
+    return make_chart(config, 400, 300)
 
 def get_solar_wind_gauge():
     data  = get_json("https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json")
@@ -128,7 +128,7 @@ def get_solar_wind_gauge():
         "data": {"datasets": [{"data": [speed], "backgroundColor": "#f1c40f"}]},
         "options": {"domain": [200, 800], "centerArea": {"text": f"{int(speed)} km/s"}}
     }
-    return make_chart(config, 400, 300)
+    return make_chart(config, 900, 260)
 
 def get_climate_emissions():
     countries = {'CHN': 11500, 'USA': 5000, 'IND': 2900, 'RUS': 1700, 'JPN': 1100}
@@ -140,7 +140,7 @@ def get_climate_emissions():
         },
         "options": {"title": {"display": True, "text": "CO2 EMISSIONS (Mt/y)"}}
     }
-    return make_chart(config, 600, 350)
+    return make_chart(config, 500, 280)
 
 # FIX 3: 'horizontalBar' was removed in Chart.js v3. Use 'bar' with indexAxis:'y'.
 def get_renewable_energy():
@@ -156,7 +156,7 @@ def get_renewable_energy():
             "title": {"display": True, "text": "RENEWABLE SHARE %"}
         }
     }
-    return make_chart(config, 600, 350)
+    return make_chart(config, 500, 280)
 
 def get_pubmed_trends():
     fields = {'Cancer': 48, 'Neuro': 35, 'Immuno': 31, 'Genetics': 42}
@@ -169,7 +169,7 @@ def get_pubmed_trends():
         },
         "options": {"title": {"display": True, "text": "RESEARCH DISTRIBUTION"}}
     }
-    return make_chart(config, 500, 400)
+    return make_chart(config, 380, 320)
 
 def get_temperature_trend():
     years = list(range(2010, 2024))
@@ -182,7 +182,7 @@ def get_temperature_trend():
         },
         "options": {"title": {"display": True, "text": "GLOBAL TEMP ANOMALY (°C)"}}
     }
-    return make_chart(config, 800, 300)
+    return make_chart(config, 900, 280)
 
 def get_fourier_waves():
     x = [round(i * 0.1, 2) for i in range(100)]
@@ -195,7 +195,7 @@ def get_fourier_waves():
             "scales": {"x": {"display": False}}
         }
     }
-    return make_chart(config, 800, 200)
+    return make_chart(config, 600, 200)
 
 # FIX 4: Actual Lorenz attractor integration using Euler method (σ=10, ρ=28, β=8/3).
 def get_lorenz_attractor():
@@ -226,7 +226,7 @@ def get_lorenz_attractor():
             "elements": {"line": {"tension": 0}}
         }
     }
-    return make_chart(config, 400, 400)
+    return make_chart(config, 360, 360)
 
 def get_apod_visual():
     data = get_json(f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}")
