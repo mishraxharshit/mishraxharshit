@@ -1,242 +1,300 @@
 """
 update_readme.py
-Fetches scientific data from free public APIs and injects it into README.md.
 
-APIs used:
-  - arXiv          : export.arxiv.org/api/query          (no key)
-  - NASA APOD      : api.nasa.gov/planetary/apod         (free key)
-  - NASA NeoWs     : api.nasa.gov/neo/rest/v1/feed       (free key)
-  - USGS FDSN      : earthquake.usgs.gov/fdsnws/event/1  (no key)
-  - NOAA SWPC      : services.swpc.noaa.gov              (no key)
+Pulls from 5 free, no-auth-needed APIs and injects data into README.md.
+Run locally or via GitHub Actions.
+
+APIs:
+  arXiv      — export.arxiv.org/api/query           (no key, no limit)
+  USGS       — earthquake.usgs.gov/fdsnws/event/1   (no key, no limit)
+  NOAA SWPC  — services.swpc.noaa.gov               (no key, no limit)
+  NASA APOD  — api.nasa.gov/planetary/apod          (free key or DEMO_KEY)
+  NASA NEO   — api.nasa.gov/neo/rest/v1/feed        (same key)
 """
 
 import os
 import re
 import json
 import urllib.request
+import urllib.error
 from datetime import datetime, timezone
 
 import feedparser
 
-NASA_API_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
+# ── config ────────────────────────────────────────────────────────────────────
+
+NASA_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
+HEADERS  = {"User-Agent": "github-readme-updater/2.0"}
+TIMEOUT  = 20
 
 
-# ── HTTP helpers ──────────────────────────────────────────────────────────────
+# ── http ─────────────────────────────────────────────────────────────────────
 
-def fetch_json(url, timeout=15):
+def get_json(url):
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "readme-updater/1.0"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+        req = urllib.request.Request(url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            return json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        print(f"  HTTP {e.code}: {url[:80]}")
     except Exception as e:
-        print(f"  warn: fetch_json {url[:70]} — {e}")
-        return None
+        print(f"  ERR: {url[:80]} — {e}")
+    return None
 
 
-# ── Data fetchers ─────────────────────────────────────────────────────────────
+def utc_now():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-def fetch_arxiv():
-    """Scrolling marquee of recent arXiv preprints (AI, ML, geophysics)."""
-    print("fetching arXiv...")
+
+# ── arXiv ─────────────────────────────────────────────────────────────────────
+
+def section_arxiv():
+    """Scrolling ticker + static table. No key, no rate limit."""
+    print("arXiv...")
     url = (
-        "http://export.arxiv.org/api/query"
+        "https://export.arxiv.org/api/query"
         "?search_query=cat:cs.AI+OR+cat:cs.LG+OR+cat:physics.geo-ph"
-        "&sortBy=submittedDate&sortOrder=descending&max_results=10"
+        "&sortBy=submittedDate&sortOrder=descending&max_results=8"
     )
     try:
         feed = feedparser.parse(url)
-        if not feed.entries:
-            return "arXiv feed unavailable."
-
-        items = []
-        for e in feed.entries:
-            title  = e.title.replace("\n", " ").strip()
-            link   = e.link
-            authors = e.get("authors", [])
-            first  = authors[0]["name"].split(",")[0] if authors else "et al."
-            items.append(f"<a href='{link}'>{title}</a> &mdash; {first}")
-
-        sep    = " &nbsp; &bull; &nbsp; "
-        ticker = sep.join(items)
-        ts     = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-        return (
-            f"<sub>Updated: {ts}</sub>\n\n"
-            f'<marquee behavior="scroll" direction="left" scrollamount="4">{ticker}</marquee>'
-        )
     except Exception as e:
-        return f"arXiv error: {e}"
+        err = f"arXiv parse error: {e}"
+        return err, err
+
+    if not feed.entries:
+        err = "arXiv: no entries returned."
+        return err, err
+
+    ts = utc_now()
+
+    # ticker — all 8
+    links = " &nbsp;·&nbsp; ".join(
+        f'<a href="{e.link}">{e.title.replace(chr(10)," ").strip()}</a>'
+        for e in feed.entries
+    )
+    ticker = (
+        f'<sub>Updated {ts}</sub><br>\n'
+        f'<marquee scrollamount="4" direction="left">{links}</marquee>'
+    )
+
+    # table — top 5
+    rows = [
+        "| Title | Authors | Cat |",
+        "|-------|---------|-----|",
+    ]
+    for e in feed.entries[:5]:
+        title   = e.title.replace("\n", " ").strip()
+        authors = e.get("authors", [])
+        names   = ", ".join(a["name"].split(",")[0] for a in authors[:2])
+        if len(authors) > 2:
+            names += " et al."
+        cat = e.get("tags", [{}])[0].get("term", "") if e.get("tags") else ""
+        rows.append(f'| [{title}]({e.link}) | {names} | `{cat}` |')
+
+    return ticker, "\n".join(rows)
 
 
-def fetch_nasa_apod():
-    """Today's NASA Astronomy Picture of the Day."""
-    print("fetching NASA APOD...")
-    data = fetch_json(f"https://api.nasa.gov/planetary/apod?api_key={NASA_API_KEY}")
+# ── NASA APOD ─────────────────────────────────────────────────────────────────
+
+def section_apod():
+    """Full inline image + description. Free key, 30 req/hr on DEMO_KEY."""
+    print("NASA APOD...")
+    data = get_json(f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}")
     if not data:
-        return "NASA APOD unavailable."
+        return "_NASA APOD unavailable — check NASA_API_KEY secret._"
 
-    title  = data.get("title", "")
-    blurb  = data.get("explanation", "")[:300].rsplit(" ", 1)[0] + "..."
-    date   = data.get("date", "")
-    mtype  = data.get("media_type", "image")
-    img    = data.get("url", "")
-    hd     = data.get("hdurl", img)
+    title = data.get("title", "")
+    date  = data.get("date", "")
+    expl  = data.get("explanation", "")
+    mtype = data.get("media_type", "image")
+    url   = data.get("url", "")
+    hd    = data.get("hdurl", url)
 
-    if mtype == "image" and img:
+    if mtype == "image" and url:
         return (
-            f"**{title}** &nbsp; <sub>{date}</sub>\n\n"
-            f"<a href='{hd}'><img src='{img}' width='360' alt='{title}' /></a>\n\n"
-            f"{blurb}\n\n"
-            f"<sub><a href='https://apod.nasa.gov/apod/'>apod.nasa.gov</a></sub>"
+            f"**{title}** <sub>— {date}</sub>\n\n"
+            f'<img src="{url}" width="680" alt="{title}" />\n\n'
+            f"{expl}"
         )
-    else:
-        return (
-            f"**{title}** &nbsp; <sub>{date}</sub>\n\n"
-            f"{blurb}\n\n"
-            f"[View]({img}) &mdash; <sub><a href='https://apod.nasa.gov/apod/'>apod.nasa.gov</a></sub>"
-        )
+    # video
+    return (
+        f"**{title}** <sub>— {date}</sub>\n\n"
+        f"{expl}\n\n"
+        f"[Watch]({url})"
+    )
 
 
-def fetch_usgs_earthquakes():
-    """Five most significant earthquakes (M 4.5+) from the past 7 days."""
-    print("fetching USGS earthquakes...")
-    url  = (
+# ── USGS ──────────────────────────────────────────────────────────────────────
+
+def section_usgs():
+    """Top 5 earthquakes M4.5+ past 7 days. No key, no limit."""
+    print("USGS...")
+    data = get_json(
         "https://earthquake.usgs.gov/fdsnws/event/1/query"
         "?format=geojson&minmagnitude=4.5&orderby=magnitude&limit=5"
     )
-    data = fetch_json(url)
     if not data or not data.get("features"):
-        return "No significant earthquakes (M 4.5+) in the past 7 days."
+        return "_No M 4.5+ earthquakes in the past 7 days._"
 
-    ts    = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    rows  = [
-        f"<sub>Updated: {ts} &mdash; <a href='https://earthquake.usgs.gov'>earthquake.usgs.gov</a></sub>\n",
-        "| Magnitude | Location | Depth | Time (UTC) |",
-        "|-----------|----------|-------|------------|",
+    rows = [
+        f"<sub>Updated {utc_now()}</sub>\n",
+        "| M | Location | Depth | Time (UTC) |",
+        "|---|----------|-------|------------|",
     ]
     for f in data["features"]:
         p     = f["properties"]
         g     = f["geometry"]["coordinates"]
         mag   = p.get("mag", "?")
-        place = p.get("place", "Unknown")[:60]
+        place = (p.get("place") or "Unknown location")[:60]
         depth = f"{g[2]:.0f} km" if len(g) > 2 else "?"
-        t     = datetime.fromtimestamp(p["time"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
+        t     = datetime.fromtimestamp(
+                    p["time"] / 1000, tz=timezone.utc
+                ).strftime("%Y-%m-%d %H:%M")
         link  = p.get("url", "#")
-        rows.append(f"| M {mag} | [{place}]({link}) | {depth} | {t} |")
+        rows.append(f"| **{mag}** | [{place}]({link}) | {depth} | {t} |")
 
     return "\n".join(rows)
 
 
-def fetch_space_weather():
-    """Current solar wind speed and geomagnetic Kp index from NOAA SWPC."""
-    print("fetching NOAA space weather...")
-    sw   = fetch_json("https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json")
-    kp   = fetch_json("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json")
-    ts   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    out  = [f"<sub>Updated: {ts} &mdash; <a href='https://www.swpc.noaa.gov'>swpc.noaa.gov</a></sub>\n"]
+# ── NOAA SWPC ─────────────────────────────────────────────────────────────────
+
+def section_swpc():
+    """Solar wind + Kp. No key, no limit."""
+    print("NOAA SWPC...")
+    sw = get_json("https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json")
+    kp = get_json("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json")
+
+    lines = [f"<sub>Updated {utc_now()}</sub>\n"]
 
     if sw and len(sw) > 1:
         try:
-            row     = sw[-1]
-            speed   = float(row[2])
-            density = float(row[1])
-            if   speed > 700: label = "Very fast"
-            elif speed > 500: label = "Fast"
-            elif speed > 350: label = "Moderate"
-            else:             label = "Slow"
-            out.append(f"**Solar wind:** {speed:.0f} km/s ({label}) &nbsp; Density: {density:.1f} p/cm³")
-        except (ValueError, IndexError):
-            out.append("**Solar wind:** parse error")
+            latest  = sw[-1]
+            speed   = float(latest[2])
+            density = float(latest[1])
+            cond    = (
+                "Very fast" if speed > 700 else
+                "Fast"      if speed > 500 else
+                "Moderate"  if speed > 350 else
+                "Slow"
+            )
+            lines.append(
+                f"**Solar wind** &nbsp; {speed:.0f} km/s — {cond}"
+                f" &nbsp; Density {density:.1f} p/cm³"
+            )
+        except Exception:
+            lines.append("**Solar wind** &nbsp; data parse error")
     else:
-        out.append("**Solar wind:** unavailable")
+        lines.append("**Solar wind** &nbsp; unavailable")
 
     if kp and len(kp) > 1:
         try:
-            kp_val = float(kp[-1][1])
-            if   kp_val >= 8: status = "Severe storm (G4–G5)"
-            elif kp_val >= 6: status = "Strong storm (G3)"
-            elif kp_val >= 5: status = "Moderate storm (G1–G2)"
-            elif kp_val >= 4: status = "Active"
-            else:             status = "Quiet"
-            aurora = "  Aurora possible at high latitudes." if kp_val >= 5 else ""
-            out.append(f"**Geomagnetic Kp:** {kp_val:.1f} — {status}.{aurora}")
-        except (ValueError, IndexError):
-            out.append("**Geomagnetic Kp:** parse error")
+            kp_val  = float(kp[-1][1])
+            status  = (
+                "Severe storm G4–G5"   if kp_val >= 8 else
+                "Strong storm G3"      if kp_val >= 6 else
+                "Moderate storm G1–G2" if kp_val >= 5 else
+                "Active"               if kp_val >= 4 else
+                "Quiet"
+            )
+            aurora  = " &nbsp; Aurora possible at high latitudes." if kp_val >= 5 else ""
+            lines.append(f"**Kp index** &nbsp; {kp_val:.1f} — {status}.{aurora}")
+        except Exception:
+            lines.append("**Kp index** &nbsp; data parse error")
     else:
-        out.append("**Geomagnetic Kp:** unavailable")
+        lines.append("**Kp index** &nbsp; unavailable")
 
-    return "\n\n".join(out)
+    return "\n\n".join(lines)
 
 
-def fetch_neo():
-    """Near-Earth objects with close approaches today, from NASA CNEOS."""
-    print("fetching NASA NEO...")
+# ── NASA NEO ─────────────────────────────────────────────────────────────────
+
+def section_neo():
+    """Near-Earth objects today. Free key."""
+    print("NASA NEO...")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    url   = (
+    data  = get_json(
         f"https://api.nasa.gov/neo/rest/v1/feed"
-        f"?start_date={today}&end_date={today}&api_key={NASA_API_KEY}"
+        f"?start_date={today}&end_date={today}&api_key={NASA_KEY}"
     )
-    data = fetch_json(url)
     if not data:
-        return "NASA NEO data unavailable."
+        return "_NASA NEO unavailable — check NASA_API_KEY secret._"
 
     neos = data.get("near_earth_objects", {}).get(today, [])
     if not neos:
-        return f"No notable close approaches on {today}."
+        return f"_No close asteroid approaches on {today}._"
 
-    neos = sorted(
-        neos,
-        key=lambda x: float(
-            x["close_approach_data"][0]["miss_distance"]["kilometers"]
-        ) if x.get("close_approach_data") else float("inf")
-    )[:5]
+    def miss_dist(n):
+        try:
+            return float(n["close_approach_data"][0]["miss_distance"]["kilometers"])
+        except Exception:
+            return float("inf")
 
-    ts   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    neos = sorted(neos, key=miss_dist)[:5]
+
     rows = [
-        f"<sub>Updated: {ts} &mdash; <a href='https://cneos.jpl.nasa.gov/'>cneos.jpl.nasa.gov</a></sub>\n",
-        "| Object | Est. diameter (m) | Miss distance | Speed (km/s) | Potentially hazardous |",
-        "|--------|-------------------|---------------|--------------|----------------------|",
+        f"<sub>Updated {utc_now()}</sub>\n",
+        "| Object | Diameter (m) | Miss distance | Speed (km/s) | Hazardous |",
+        "|--------|-------------|---------------|--------------|-----------|",
     ]
     for n in neos:
-        name    = n.get("name", "?")
-        hazard  = "Yes" if n.get("is_potentially_hazardous_asteroid") else "No"
-        d       = n.get("estimated_diameter", {}).get("meters", {})
-        dstr    = f"{d.get('estimated_diameter_min', 0):.0f}–{d.get('estimated_diameter_max', 0):.0f}"
-        ca      = n.get("close_approach_data", [{}])[0]
-        dist    = f"{float(ca.get('miss_distance', {}).get('kilometers', 0)):,.0f}"
-        spd     = f"{float(ca.get('relative_velocity', {}).get('kilometers_per_second', 0)):.2f}"
-        jpl     = n.get("nasa_jpl_url", "#")
+        name   = n.get("name", "?")
+        hazard = "Yes" if n.get("is_potentially_hazardous_asteroid") else "No"
+        dm     = n.get("estimated_diameter", {}).get("meters", {})
+        dstr   = (
+            f"{dm.get('estimated_diameter_min',0):.0f}–"
+            f"{dm.get('estimated_diameter_max',0):.0f}"
+        )
+        ca   = n.get("close_approach_data", [{}])[0]
+        dist = f"{float(ca.get('miss_distance',{}).get('kilometers',0)):,.0f}"
+        spd  = f"{float(ca.get('relative_velocity',{}).get('kilometers_per_second',0)):.2f}"
+        jpl  = n.get("nasa_jpl_url", "#")
         rows.append(f"| [{name}]({jpl}) | {dstr} | {dist} km | {spd} | {hazard} |")
 
     return "\n".join(rows)
 
 
-# ── README injection ──────────────────────────────────────────────────────────
+# ── inject ────────────────────────────────────────────────────────────────────
 
-def inject(readme, start, end, content):
-    pattern     = rf"{re.escape(start)}.*?{re.escape(end)}"
+def inject(text, start, end, content):
+    pat = re.compile(
+        rf"{re.escape(start)}.*?{re.escape(end)}",
+        flags=re.DOTALL
+    )
     replacement = f"{start}\n{content}\n{end}"
-    result      = re.sub(pattern, replacement, readme, flags=re.DOTALL)
-    if result == readme:
-        print(f"  warn: marker not found — {start}")
+    result, n   = pat.subn(replacement, text)
+    if n == 0:
+        print(f"  WARN marker not found: {start}")
     return result
 
 
+# ── main ──────────────────────────────────────────────────────────────────────
+
 def main():
-    print("update_readme.py starting")
+    print("=" * 50)
+    print("update_readme.py")
+    print("=" * 50)
 
-    with open("README.md", "r", encoding="utf-8") as f:
-        readme = f.read()
+    try:
+        with open("README.md", encoding="utf-8") as f:
+            readme = f.read()
+    except FileNotFoundError:
+        print("README.md not found.")
+        return
 
-    readme = inject(readme, "<!-- ARXIV_TICKER_START -->", "<!-- ARXIV_TICKER_END -->", fetch_arxiv())
-    readme = inject(readme, "<!-- NASA_APOD_START -->",    "<!-- NASA_APOD_END -->",    fetch_nasa_apod())
-    readme = inject(readme, "<!-- USGS_START -->",         "<!-- USGS_END -->",         fetch_usgs_earthquakes())
-    readme = inject(readme, "<!-- SWPC_START -->",         "<!-- SWPC_END -->",         fetch_space_weather())
-    readme = inject(readme, "<!-- NEO_START -->",          "<!-- NEO_END -->",          fetch_neo())
+    ticker, table = section_arxiv()
+
+    readme = inject(readme, "<!-- ARXIV_TICKER_START -->", "<!-- ARXIV_TICKER_END -->", ticker)
+    readme = inject(readme, "<!-- ARXIV_LIST_START -->",   "<!-- ARXIV_LIST_END -->",   table)
+    readme = inject(readme, "<!-- APOD_START -->",         "<!-- APOD_END -->",         section_apod())
+    readme = inject(readme, "<!-- USGS_START -->",         "<!-- USGS_END -->",         section_usgs())
+    readme = inject(readme, "<!-- SWPC_START -->",         "<!-- SWPC_END -->",         section_swpc())
+    readme = inject(readme, "<!-- NEO_START -->",          "<!-- NEO_END -->",          section_neo())
 
     with open("README.md", "w", encoding="utf-8") as f:
         f.write(readme)
 
-    print("done — README.md updated.")
+    print("\nREADME.md updated.")
 
 
 if __name__ == "__main__":
