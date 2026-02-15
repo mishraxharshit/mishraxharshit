@@ -28,7 +28,7 @@ jobs:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
         run: |
           echo "Starting scientific data update..."
-          python update_readme_professional.py
+          python update_readme.py
           echo "Update completed successfully"
       
       - name: Commit Changes
