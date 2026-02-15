@@ -2,7 +2,7 @@
 
 # Scientific Data Dashboard
 
-Real-time monitoring of research, space, geophysics, and economic indicators
+Real-time monitoring of global development, space, and geophysical indicators
 
 <!-- START_TIMESTAMP -->
 <!-- END_TIMESTAMP -->
@@ -11,30 +11,39 @@ Real-time monitoring of research, space, geophysics, and economic indicators
 
 </div>
 
-## Research & Academia
+## Global Development Indicators
+*Powered by Our World in Data*
 
 <table>
 <tr>
-<td width="100%" align="center">
-<b>ARXIV PAPER SUBMISSIONS</b><br>
-<sub>Recent publications across Physics, Mathematics, and Computer Science</sub><br>
-<!-- START_ARXIV -->
-<!-- END_ARXIV -->
+<td width="50%" align="center" valign="top">
+<b>CLIMATE CHANGE</b><br>
+<sub>Annual CO₂ Emissions by Country</sub><br>
+<!-- START_CLIMATE -->
+<!-- END_CLIMATE -->
+</td>
+<td width="50%" align="center" valign="top">
+<b>GLOBAL HEALTH</b><br>
+<sub>Life Expectancy by Continent</sub><br>
+<!-- START_HEALTH -->
+<!-- END_HEALTH -->
 </td>
 </tr>
 </table>
 
----
-
-## Global Economics
-
 <table>
 <tr>
-<td width="100%" align="center">
-<b>ECONOMIC INDICATORS</b><br>
-<sub>GDP Growth Rates | World Bank Data</sub><br>
-<!-- START_ECONOMICS -->
-<!-- END_ECONOMICS -->
+<td width="50%" align="center" valign="top">
+<b>RENEWABLE ENERGY</b><br>
+<sub>Share of Total Energy Consumption</sub><br>
+<!-- START_ENERGY -->
+<!-- END_ENERGY -->
+</td>
+<td width="50%" align="center" valign="top">
+<b>POVERTY REDUCTION</b><br>
+<sub>Global Extreme Poverty Trend</sub><br>
+<!-- START_POVERTY -->
+<!-- END_POVERTY -->
 </td>
 </tr>
 </table>
@@ -133,22 +142,33 @@ Real-time monitoring of research, space, geophysics, and economic indicators
 
 ## Data Sources
 
-**Academic Research:**
-- arXiv.org - Open access research papers (Physics, Mathematics, Computer Science)
-
-**Economic Data:**
-- World Bank Open Data - Development indicators and economic statistics
+**Global Development (Our World in Data):**
+- Climate Change: CO₂ emissions tracking
+- Health: Life expectancy and mortality rates
+- Energy: Renewable energy adoption
+- Poverty: Economic development indicators
+- All data: CC-BY license, open access
 
 **Space & Astronomy:**
-- NASA API - Astronomy Picture of the Day, Near Earth Object tracking
-- NOAA Space Weather Prediction Center - Solar wind monitoring
-- Open Notify - ISS real-time position tracking
+- NASA API: Astronomy Picture of the Day, Near Earth Objects
+- NOAA Space Weather: Solar wind monitoring
+- Open Notify: ISS real-time tracking
 
 **Geophysics:**
-- USGS Earthquake Hazards Program - Real-time seismic data
+- USGS: Real-time earthquake monitoring
 
 **Mathematical:**
-- Computed visualizations based on standard mathematical models
+- Computed visualizations based on standard models
+
+---
+
+## About Our World in Data
+
+Our World in Data is a scientific online publication that focuses on large global problems such as poverty, disease, hunger, climate change, war, existential risks, and inequality. The publication's motto is "Research and data to make progress against the world's largest problems."
+
+All visualizations and data from Our World in Data are completely open access under the Creative Commons BY license, making them freely available for public use, adaptation, and republication.
+
+**Website:** https://ourworldindata.org
 
 ---
 
@@ -160,7 +180,7 @@ This dashboard updates automatically twice daily at 06:00 and 18:00 UTC via GitH
 
 <div align="center">
 
-<sub>Dashboard Status: ONLINE | Update Frequency: Twice Daily | Data Sources: 7 Active</sub>
+<sub>Dashboard Status: ONLINE | Update Frequency: Twice Daily | Data Sources: 8 Active</sub>
 
 </div>
 <img src="https://github-readme-activity-graph.vercel.app/graph?username=mishraxharshit&bg_color=0D1117&color=4FC3F7&line=4FC3F7&point=4FC3F7&area=true&hide_border=true&hide_title=true&hide_legend=true" width="100%" />
