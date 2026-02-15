@@ -1,52 +1,31 @@
-name: Scientific Dashboard Update
+name: Update Scientific Dashboard
 
 on:
   schedule:
-    # Runs twice daily at 06:00 and 18:00 UTC
-    - cron: '0 6,18 * * *'
-  
-  workflow_dispatch:
+    # Ye har 6 ghante mein ek baar chalega
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Taaki aap manually bhi button daba kar update kar sakein
 
 jobs:
-  update-dashboard:
+  build:
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: write
-    
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-      
-      - name: Update Scientific Dashboard
+          python-version: '3.x'
+
+      - name: Update README
         env:
-          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }} # Agar aapke paas key hai toh Secret mein daal sakte hain
+        run: python update_readme.py
+
+      - name: Commit and Push Changes
         run: |
-          echo "Starting scientific data update..."
-          python update_readme.py
-          echo "Update completed successfully"
-      
-      - name: Commit Changes
-        run: |
-          git config user.name "Scientific Dashboard Bot"
-          git config user.email "dashboard@users.noreply.github.com"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
           git add README.md
-          
-          if git diff --staged --quiet; then
-            echo "No changes detected"
-          else
-            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
-            git commit -m "Update: Scientific data refresh - $TIMESTAMP"
-            git push
-            echo "Changes committed and pushed"
-          fi
-      
-      - name: Report Status
-        if: failure()
-        run: |
-          echo "Dashboard update failed - check logs for details"
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update dashboard data [skip ci]" && git push)
