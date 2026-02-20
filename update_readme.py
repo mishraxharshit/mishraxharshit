@@ -455,20 +455,24 @@ def get_trade_balance():
     return make_chart(config, 900, 300)
 
 # ── VISUAL DATA ───────────────────────────────────────────────────────────────
-def _download_image(url, save_path, max_mb=8):
+def _download_image(url, save_path, max_mb=15):
     """Download image to local file. Returns True on success."""
     try:
+        print(f"  Downloading: {url}")
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=25) as r:
+        with urllib.request.urlopen(req, timeout=30) as r:
             raw = r.read(max_mb * 1024 * 1024 + 1)
         if not raw or len(raw) > max_mb * 1024 * 1024:
+            print(f"  SKIP: too large or empty")
             return False
         import os
         os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
         with open(save_path, "wb") as f:
             f.write(raw)
+        print(f"  Saved {len(raw)//1024}KB → {save_path}")
         return True
-    except Exception:
+    except Exception as e:
+        print(f"  FAIL: {e}")
         return False
 
 def get_apod_visual():
@@ -522,26 +526,28 @@ def get_apod_visual():
                 f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
             )
 
-    # ── Curated fallback — download a known-good image ────────────────────────
+    # ── Curated fallback — small known-good images (960/1024px, under 1MB) ───
     fallbacks = [
-        ("https://apod.nasa.gov/apod/image/2401/ArcticNight_Cobianchi_2048.jpg",
-         "Arctic Night — Noctilucent clouds over Norway"),
         ("https://apod.nasa.gov/apod/image/2312/NGC1232_Eye_1024.jpg",
          "NGC 1232 — A Grand Design Spiral Galaxy"),
-        ("https://apod.nasa.gov/apod/image/2309/Arp142_HubbleChakrabarti_2627.jpg",
-         "Arp 142 — The Penguin and the Egg (Hubble)"),
         ("https://apod.nasa.gov/apod/image/2310/PilarsCosmos_HubbleFried_960.jpg",
          "Pillars of Creation — Eagle Nebula (Hubble)"),
+        ("https://apod.nasa.gov/apod/image/2402/Horsehead_Webb_960.jpg",
+         "Horsehead Nebula — James Webb Space Telescope"),
+        ("https://apod.nasa.gov/apod/image/2309/Arp142_HubbleChakrabarti_1047.jpg",
+         "Arp 142 — The Penguin and the Egg (Hubble)"),
     ]
-    raw_url, caption = fallbacks[datetime.now().day % len(fallbacks)]
-    if _download_image(raw_url, ASSET):
-        return (
-            f"![{caption}]({MD})\n\n"
-            f"🌌 _{caption}_\n\n"
-            f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
-        )
-    # Absolute last resort
-    return f"🌌 _{caption}_\n\n_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
+    # Try all fallbacks in order until one downloads successfully
+    for raw_url, caption in fallbacks:
+        if _download_image(raw_url, ASSET):
+            print(f"  Fallback image OK: {caption}")
+            return (
+                f"![{caption}]({MD})\n\n"
+                f"🌌 _{caption}_\n\n"
+                f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
+            )
+    print("  WARNING: All APOD image downloads failed.")
+    return f"🌌 _([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
 
 def get_protein_visual():
     """Rotates between 3 well-known protein structures — downloads image to assets/."""
