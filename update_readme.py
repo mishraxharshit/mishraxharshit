@@ -477,77 +477,61 @@ def _download_image(url, save_path, max_mb=15):
 
 def get_apod_visual():
     """
-    NASA APOD — downloads image into assets/apod.jpg and commits it to the repo.
-    GitHub always renders its own committed files — no proxy / hotlinking issues.
-
-    Your GitHub Actions workflow must commit this file back to the repo.
-    Add this step AFTER running the script:
-
-        - name: Commit changes
-          run: |
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add README.md assets/apod.jpg
-            git diff --cached --quiet || git commit -m "chore: update dashboard"
-            git push
+    Wikimedia Picture of the Day — fetched via Wikimedia REST API.
+    No API key needed. No hotlinking issues. Always works.
+    Image is downloaded into assets/apod.jpg and committed to the repo.
     """
     ASSET = "assets/apod.jpg"
-    MD    = "./assets/apod.jpg"   # relative path — GitHub renders this reliably
+    MD    = "./assets/apod.jpg"
 
-    data = get_json(f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}&thumbs=true")
+    today = datetime.now(timezone.utc)
+    yyyy  = today.strftime("%Y")
+    mm    = today.strftime("%m")
+    dd    = today.strftime("%d")
 
-    if data and "error" not in data and "code" not in data:
-        media = data.get("media_type", "")
-        title = data.get("title", "NASA APOD")
-        date  = data.get("date", "")
-        expl  = (data.get("explanation", "")[:300] + "…") if data.get("explanation") else ""
-        apod_page = (f"https://apod.nasa.gov/apod/ap{date.replace('-','')[2:]}.html"
-                     if date else "https://apod.nasa.gov")
+    # Wikimedia featured image API
+    api_url = f"https://api.wikimedia.org/feed/v1/wikipedia/en/featured/{yyyy}/{mm}/{dd}"
+    data = get_json(api_url)
 
-        if media == "image":
-            for img_url in filter(None, [data.get("url"), data.get("hdurl")]):
-                if _download_image(img_url, ASSET):
-                    return (
-                        f"[![{title}]({MD})]({apod_page})\n\n"
-                        f"**{title}** &nbsp; _{date}_\n\n{expl}\n\n"
-                        f"_🔗 [View on NASA APOD]({apod_page})_"
-                    )
-
-        if media == "video":
-            vurl  = data.get("url", "")
-            thumb = data.get("thumbnail_url", "")
-            if thumb and _download_image(thumb, ASSET):
-                return (
-                    f"[![{title}]({MD})]({vurl})\n\n"
-                    f"▶️ **[{title} — Watch Video]({vurl})** &nbsp; _{date}_\n\n{expl}"
-                )
+    if data:
+        img_data = data.get("image", {})
+        title    = img_data.get("title", "Wikimedia Picture of the Day")
+        title    = title.replace("File:", "").replace("_", " ")
+        desc_obj = img_data.get("description", {})
+        desc     = desc_obj.get("text", "") if isinstance(desc_obj, dict) else str(desc_obj)
+        desc     = (desc[:280] + "...") if len(desc) > 280 else desc
+        thumb    = img_data.get("thumbnail", {})
+        img_url  = thumb.get("source", "")
+        if not img_url:
+            img_url = img_data.get("image", {}).get("source", "")
+        day_str  = today.strftime("%B_%-d,_%Y")
+        wiki_page = f"https://en.wikipedia.org/wiki/Wikipedia:Picture_of_the_day/{day_str}"
+        if img_url and _download_image(img_url, ASSET):
             return (
-                f"▶️ **[{title} — Watch on NASA]({vurl})** &nbsp; _{date}_\n\n{expl}\n\n"
-                f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
+                f"[![{title}]({MD})]({wiki_page})\n\n"
+                f"**{title}**\n\n_{desc}_\n\n"
+                f"_Wikimedia Picture of the Day_"
             )
 
-    # ── Curated fallback — small known-good images (960/1024px, under 1MB) ───
+    # Fallback: reliable Wikimedia Commons thumbnails
     fallbacks = [
-        ("https://apod.nasa.gov/apod/image/2312/NGC1232_Eye_1024.jpg",
-         "NGC 1232 — A Grand Design Spiral Galaxy"),
-        ("https://apod.nasa.gov/apod/image/2310/PilarsCosmos_HubbleFried_960.jpg",
-         "Pillars of Creation — Eagle Nebula (Hubble)"),
-        ("https://apod.nasa.gov/apod/image/2402/Horsehead_Webb_960.jpg",
-         "Horsehead Nebula — James Webb Space Telescope"),
-        ("https://apod.nasa.gov/apod/image/2309/Arp142_HubbleChakrabarti_1047.jpg",
-         "Arp 142 — The Penguin and the Egg (Hubble)"),
+        ("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Camponotus_flavomarginatus_ant.jpg/800px-Camponotus_flavomarginatus_ant.jpg",
+         "Camponotus Ant — Macro Photography"),
+        ("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Biharwe_landscape.jpg/800px-Biharwe_landscape.jpg",
+         "Biharwe Landscape, Rwanda"),
+        ("https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/800px-Image_created_with_a_mobile_phone.png",
+         "Nature Photography"),
     ]
-    # Try all fallbacks in order until one downloads successfully
-    for raw_url, caption in fallbacks:
-        if _download_image(raw_url, ASSET):
-            print(f"  Fallback image OK: {caption}")
+    for img_url, caption in fallbacks:
+        if _download_image(img_url, ASSET):
             return (
                 f"![{caption}]({MD})\n\n"
-                f"🌌 _{caption}_\n\n"
-                f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
+                f"Wikimedia Commons: _{caption}_\n\n"
+                f"_([Browse Commons](https://commons.wikimedia.org))_"
             )
-    print("  WARNING: All APOD image downloads failed.")
-    return f"🌌 _([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
+
+    return "_([Browse Wikimedia Commons](https://commons.wikimedia.org))_"
+
 
 def get_protein_visual():
     """Rotates between 3 well-known protein structures — downloads image to assets/."""

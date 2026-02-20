@@ -122,7 +122,7 @@
 <tr>
 <td width="60%" valign="top">
 
-### 🌌 NASA Astronomy Picture of the Day
+### 🖼️ Wikimedia Picture of the Day
 <!-- START_APOD -->
 <!-- END_APOD -->
 
