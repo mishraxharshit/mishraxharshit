@@ -534,11 +534,14 @@ def get_apod_visual():
 
 
 def get_protein_visual():
-    """Rotates between 3 well-known protein structures — downloads image to assets/."""
+    """Rotates between protein structures daily — downloads to assets/protein.jpg."""
     entries = [
         ("6LU7", "COVID-19 Main Protease"),
         ("1BNA", "B-DNA Double Helix"),
         ("2HHB", "Haemoglobin"),
+        ("1MBO", "Myoglobin"),
+        ("4HHB", "Deoxyhaemoglobin"),
+        ("1CRN", "Crambin — Smallest known protein"),
     ]
     pdb, name = entries[datetime.now().day % len(entries)]
     img_url   = f"https://cdn.rcsb.org/images/structures/{pdb.lower()}_assembly-1.jpeg"
@@ -547,14 +550,13 @@ def get_protein_visual():
 
     if _download_image(img_url, asset):
         return (
-            f"![{name}]({md})\n\n"
-            f"🧬 **{name}** &nbsp; PDB: `{pdb}` &nbsp;"
-            f"([View 3D Structure](https://www.rcsb.org/structure/{pdb}))"
+            f'<img src="{md}" width="100%" style="border-radius:8px;" />\n\n'
+            f"🧬 **{name}** &nbsp; `{pdb}`\n\n"
+            f"_([View 3D Structure](https://www.rcsb.org/structure/{pdb}))_"
         )
-    # fallback — direct URL
     return (
-        f"🧬 **{name}** &nbsp; PDB: `{pdb}` &nbsp;"
-        f"([View 3D Structure](https://www.rcsb.org/structure/{pdb}))"
+        f"🧬 **{name}** &nbsp; `{pdb}`\n\n"
+        f"_([View 3D Structure](https://www.rcsb.org/structure/{pdb}))_"
     )
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
