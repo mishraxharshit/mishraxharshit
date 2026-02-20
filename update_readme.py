@@ -457,55 +457,73 @@ def get_trade_balance():
 # ── VISUAL DATA ───────────────────────────────────────────────────────────────
 def get_apod_visual():
     """
-    NASA APOD with video fallback and curated image fallback.
-    Never returns empty — always shows something.
+    NASA APOD — always shows something.
+
+    GitHub README image rendering rules:
+    - HTML <img> tags with external NASA URLs are often blocked (hotlinking).
+    - Markdown ![](url) syntax works IF the host allows hotlinking.
+    - Best fix: route image through a public proxy (images.weserv.nl) which
+      caches and re-serves the image — GitHub renders it reliably.
+    - Use regular `url` (not hdurl) — hdurl can be 10MB+ and times out.
     """
-    # DEMO_KEY rate limit: 30 req/hr. Real key use karo NASA_API_KEY secret se.
+    def proxied(url):
+        """Wrap any image URL through weserv CDN proxy for reliable GitHub rendering."""
+        encoded = urllib.parse.quote(url.replace("https://", "").replace("http://", ""), safe="")
+        return f"https://images.weserv.nl/?url={encoded}&w=900&output=jpg"
+
+    # DEMO_KEY: 30 req/hr per IP. Set NASA_API_KEY GitHub secret for 1000 req/hr.
     data = get_json(f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}&thumbs=true")
+
     if data and "error" not in data and "code" not in data:
         media = data.get("media_type", "")
         title = data.get("title", "NASA APOD")
         date  = data.get("date", "")
-        expl  = (data.get("explanation", "")[:220] + "…") if data.get("explanation") else ""
+        expl  = (data.get("explanation", "")[:300] + "…") if data.get("explanation") else ""
+        apod_page = f"https://apod.nasa.gov/apod/ap{date.replace('-','')[2:]}.html" if date else "https://apod.nasa.gov"
 
         if media == "image":
-            url = data.get("hdurl") or data.get("url", "")
-            if url:
+            raw_url = data.get("url", "")   # use regular url, NOT hdurl (too large)
+            if raw_url:
+                img = proxied(raw_url)
                 return (
-                    f'<img src="{url}" width="100%" style="border-radius:6px;" />\n\n'
-                    f'**{title}** &nbsp; _{date}_\n\n{expl}'
+                    f"[![{title}]({img})]({apod_page})\n\n"
+                    f"**{title}** &nbsp; _{date}_\n\n{expl}\n\n"
+                    f"_🔗 [View on NASA APOD]({apod_page})_"
                 )
 
         if media == "video":
             vurl  = data.get("url", "")
-            # thumbs=true parameter se thumbnail milta hai video ke liye
             thumb = data.get("thumbnail_url", "")
             if thumb:
+                img = proxied(thumb)
                 return (
-                    f'<img src="{thumb}" width="100%" style="border-radius:6px;" />\n\n'
-                    f'▶️ **[{title} — Watch Video]({vurl})** &nbsp; _{date}_\n\n{expl}'
+                    f"[![{title}]({img})]({vurl})\n\n"
+                    f"▶️ **[{title} — Watch Video]({vurl})** &nbsp; _{date}_\n\n{expl}"
                 )
             else:
-                # Thumbnail nahi mila — sirf link dikhao
                 return (
-                    f'▶️ **[{title} — Watch on NASA]({vurl})** &nbsp; _{date}_\n\n{expl}\n\n'
-                    f'_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_'
+                    f"▶️ **[{title} — Watch on NASA]({vurl})** &nbsp; _{date}_\n\n{expl}\n\n"
+                    f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
                 )
 
-    # Curated fallback — rotates by day-of-month
-    # (API fail ho ya rate limit ho tab bhi kuch dikhega)
+    # ── Curated fallback — rotates by day-of-month ────────────────────────────
+    # These are known-good APOD images; proxied for reliable GitHub rendering.
     fallbacks = [
         ("https://apod.nasa.gov/apod/image/2401/ArcticNight_Cobianchi_2048.jpg",
          "Arctic Night — Noctilucent clouds over Norway"),
-        ("https://apod.nasa.gov/apod/image/2402/Horsehead_Webb_960.jpg",
-         "Horsehead Nebula — James Webb Space Telescope"),
         ("https://apod.nasa.gov/apod/image/2312/NGC1232_Eye_1024.jpg",
          "NGC 1232 — A Grand Design Spiral Galaxy"),
+        ("https://apod.nasa.gov/apod/image/2309/Arp142_HubbleChakrabarti_2627.jpg",
+         "Arp 142 — The Penguin and the Egg (Hubble)"),
+        ("https://apod.nasa.gov/apod/image/2310/PilarsCosmos_HubbleFried_960.jpg",
+         "Pillars of Creation — Eagle Nebula (Hubble)"),
     ]
-    img_url, caption = fallbacks[datetime.now().day % len(fallbacks)]
+    raw_url, caption = fallbacks[datetime.now().day % len(fallbacks)]
+    img = proxied(raw_url)
     return (
-        f'<img src="{img_url}" width="100%" style="border-radius:6px;" />\n\n'
-        f'🌌 _{caption}_ &nbsp;([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))'
+        f"![{caption}]({img})\n\n"
+        f"🌌 _{caption}_\n\n"
+        f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
     )
 
 def get_protein_visual():
