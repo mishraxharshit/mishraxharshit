@@ -455,23 +455,41 @@ def get_trade_balance():
     return make_chart(config, 900, 300)
 
 # ── VISUAL DATA ───────────────────────────────────────────────────────────────
+def _download_image(url, save_path, max_mb=8):
+    """Download image to local file. Returns True on success."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=25) as r:
+            raw = r.read(max_mb * 1024 * 1024 + 1)
+        if not raw or len(raw) > max_mb * 1024 * 1024:
+            return False
+        import os
+        os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
+        with open(save_path, "wb") as f:
+            f.write(raw)
+        return True
+    except Exception:
+        return False
+
 def get_apod_visual():
     """
-    NASA APOD — always shows something.
+    NASA APOD — downloads image into assets/apod.jpg and commits it to the repo.
+    GitHub always renders its own committed files — no proxy / hotlinking issues.
 
-    GitHub README image rendering rules:
-    - HTML <img> tags with external NASA URLs are often blocked (hotlinking).
-    - Markdown ![](url) syntax works IF the host allows hotlinking.
-    - Best fix: route image through a public proxy (images.weserv.nl) which
-      caches and re-serves the image — GitHub renders it reliably.
-    - Use regular `url` (not hdurl) — hdurl can be 10MB+ and times out.
+    Your GitHub Actions workflow must commit this file back to the repo.
+    Add this step AFTER running the script:
+
+        - name: Commit changes
+          run: |
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add README.md assets/apod.jpg
+            git diff --cached --quiet || git commit -m "chore: update dashboard"
+            git push
     """
-    def proxied(url):
-        """Wrap any image URL through weserv CDN proxy for reliable GitHub rendering."""
-        encoded = urllib.parse.quote(url.replace("https://", "").replace("http://", ""), safe="")
-        return f"https://images.weserv.nl/?url={encoded}&w=900&output=jpg"
+    ASSET = "assets/apod.jpg"
+    MD    = "./assets/apod.jpg"   # relative path — GitHub renders this reliably
 
-    # DEMO_KEY: 30 req/hr per IP. Set NASA_API_KEY GitHub secret for 1000 req/hr.
     data = get_json(f"https://api.nasa.gov/planetary/apod?api_key={NASA_KEY}&thumbs=true")
 
     if data and "error" not in data and "code" not in data:
@@ -479,35 +497,32 @@ def get_apod_visual():
         title = data.get("title", "NASA APOD")
         date  = data.get("date", "")
         expl  = (data.get("explanation", "")[:300] + "…") if data.get("explanation") else ""
-        apod_page = f"https://apod.nasa.gov/apod/ap{date.replace('-','')[2:]}.html" if date else "https://apod.nasa.gov"
+        apod_page = (f"https://apod.nasa.gov/apod/ap{date.replace('-','')[2:]}.html"
+                     if date else "https://apod.nasa.gov")
 
         if media == "image":
-            raw_url = data.get("url", "")   # use regular url, NOT hdurl (too large)
-            if raw_url:
-                img = proxied(raw_url)
-                return (
-                    f"[![{title}]({img})]({apod_page})\n\n"
-                    f"**{title}** &nbsp; _{date}_\n\n{expl}\n\n"
-                    f"_🔗 [View on NASA APOD]({apod_page})_"
-                )
+            for img_url in filter(None, [data.get("url"), data.get("hdurl")]):
+                if _download_image(img_url, ASSET):
+                    return (
+                        f"[![{title}]({MD})]({apod_page})\n\n"
+                        f"**{title}** &nbsp; _{date}_\n\n{expl}\n\n"
+                        f"_🔗 [View on NASA APOD]({apod_page})_"
+                    )
 
         if media == "video":
             vurl  = data.get("url", "")
             thumb = data.get("thumbnail_url", "")
-            if thumb:
-                img = proxied(thumb)
+            if thumb and _download_image(thumb, ASSET):
                 return (
-                    f"[![{title}]({img})]({vurl})\n\n"
+                    f"[![{title}]({MD})]({vurl})\n\n"
                     f"▶️ **[{title} — Watch Video]({vurl})** &nbsp; _{date}_\n\n{expl}"
                 )
-            else:
-                return (
-                    f"▶️ **[{title} — Watch on NASA]({vurl})** &nbsp; _{date}_\n\n{expl}\n\n"
-                    f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
-                )
+            return (
+                f"▶️ **[{title} — Watch on NASA]({vurl})** &nbsp; _{date}_\n\n{expl}\n\n"
+                f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
+            )
 
-    # ── Curated fallback — rotates by day-of-month ────────────────────────────
-    # These are known-good APOD images; proxied for reliable GitHub rendering.
+    # ── Curated fallback — download a known-good image ────────────────────────
     fallbacks = [
         ("https://apod.nasa.gov/apod/image/2401/ArcticNight_Cobianchi_2048.jpg",
          "Arctic Night — Noctilucent clouds over Norway"),
@@ -519,26 +534,37 @@ def get_apod_visual():
          "Pillars of Creation — Eagle Nebula (Hubble)"),
     ]
     raw_url, caption = fallbacks[datetime.now().day % len(fallbacks)]
-    img = proxied(raw_url)
-    return (
-        f"![{caption}]({img})\n\n"
-        f"🌌 _{caption}_\n\n"
-        f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
-    )
+    if _download_image(raw_url, ASSET):
+        return (
+            f"![{caption}]({MD})\n\n"
+            f"🌌 _{caption}_\n\n"
+            f"_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
+        )
+    # Absolute last resort
+    return f"🌌 _{caption}_\n\n_([Browse APOD Archive](https://apod.nasa.gov/apod/archivepix.html))_"
 
 def get_protein_visual():
-    """Rotates between 3 well-known protein structures daily."""
+    """Rotates between 3 well-known protein structures — downloads image to assets/."""
     entries = [
         ("6LU7", "COVID-19 Main Protease"),
         ("1BNA", "B-DNA Double Helix"),
         ("2HHB", "Haemoglobin"),
     ]
     pdb, name = entries[datetime.now().day % len(entries)]
+    img_url   = f"https://cdn.rcsb.org/images/structures/{pdb.lower()}_assembly-1.jpeg"
+    asset     = "assets/protein.jpg"
+    md        = "./assets/protein.jpg"
+
+    if _download_image(img_url, asset):
+        return (
+            f"![{name}]({md})\n\n"
+            f"🧬 **{name}** &nbsp; PDB: `{pdb}` &nbsp;"
+            f"([View 3D Structure](https://www.rcsb.org/structure/{pdb}))"
+        )
+    # fallback — direct URL
     return (
-        f'<img src="https://cdn.rcsb.org/images/structures/{pdb.lower()}_assembly-1.jpeg"'
-        f' width="100%" style="border-radius:6px;" />\n\n'
-        f'🧬 **{name}** &nbsp; PDB: `{pdb}` &nbsp;'
-        f'([View 3D Structure](https://www.rcsb.org/structure/{pdb}))'
+        f"🧬 **{name}** &nbsp; PDB: `{pdb}` &nbsp;"
+        f"([View 3D Structure](https://www.rcsb.org/structure/{pdb}))"
     )
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
@@ -564,7 +590,15 @@ def main():
 
     with open("README.md", "w", encoding="utf-8") as f:
         f.write(readme)
-    print("Dashboard updated successfully.")
+    print("✅ Dashboard updated successfully.")
+    print()
+    print("📌 Make sure your GitHub Actions workflow commits assets/ folder:")
+    print("   git add README.md assets/")
+    print("   git diff --cached --quiet || git commit -m 'chore: update dashboard'")
+    print("   git push")
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
