@@ -7,7 +7,7 @@
 ![Data Sources](https://img.shields.io/badge/Sources-Wikimedia%20·%20USGS%20·%20NOAA%20·%20arXiv%20·%20World%20Bank-0D1117?style=flat-square)
 
 <!-- START_TIME -->
-<sub>⏱ Last Updated: 2026-02-20 18:52 UTC</sub>
+<sub>⏱ Last Updated: 2026-02-21 02:07 UTC</sub>
 <!-- END_TIME -->
 
 </div>
@@ -22,11 +22,11 @@
 
 ### 🌌 Wikimedia Picture of the Day
 <!-- START_APOD -->
-[![Irish peasant farmer smoking pipe, 1890s.jpg](./assets/apod.jpg)](https://en.wikipedia.org/wiki/Wikipedia:Picture_of_the_day/February_20,_2026)
+[![2018-11-24 Women's World Cup at 2018-19 Luge World Cup in Igls by Sandro Halank–372.jpg](./assets/apod.jpg)](https://en.wikipedia.org/wiki/Wikipedia:Picture_of_the_day/February_21,_2026)
 
-**Irish peasant farmer smoking pipe, 1890s.jpg**
+**2018-11-24 Women's World Cup at 2018-19 Luge World Cup in Igls by Sandro Halank–372.jpg**
 
-_This photochrom print depicts a male Irish peasant farmer standing in doorway while smoking a pipe. Today is International Pipe Smoking Day._
+_German luger and Olympic champion Natalie Geisenberger_
 
 _Wikimedia Picture of the Day_
 <!-- END_APOD -->
@@ -38,9 +38,9 @@ _Wikimedia Picture of the Day_
 <!-- START_PROTEIN -->
 <img src="./assets/protein.jpg" width="100%" style="border-radius:8px;" />
 
-🧬 **Haemoglobin** &nbsp; `2HHB`
+🧬 **Myoglobin** &nbsp; `1MBO`
 
-_([View 3D Structure](https://www.rcsb.org/structure/2HHB))_
+_([View 3D Structure](https://www.rcsb.org/structure/1MBO))_
 <!-- END_PROTEIN -->
 
 </td>
@@ -52,18 +52,7 @@ _([View 3D Structure](https://www.rcsb.org/structure/2HHB))_
 ## 📡 Live Research Feed
 
 <!-- START_TICKER -->
-| # | Field | Latest Paper (auto-updated every 6 hrs) |
-|:-:|:------|:-----------------------------------------|
-| 1 | 🔵 Astrophysics | [Bremsstrahlung emission from nuclear reactions in compact stars](https://arxiv.org/abs/1912.12092v1) |
-| 2 | 🔵 Astrophysics | [Towards a warped inflationary brane scanning](https://arxiv.org/abs/0812.4649v3) |
-| 3 | 🟣 Quantum Physics | [A Study of Entanglement and Ansatz Expressivity for the Transverse-Field Ising](https://arxiv.org/abs/2602.17662v1) |
-| 4 | 🟣 Quantum Physics | [Benchmarking quantum phase-space methods for near-resonant light propagation](https://arxiv.org/abs/2602.17660v1) |
-| 5 | 🟢 AI / CS | [Sink-Aware Pruning for Diffusion Language Models](https://arxiv.org/abs/2602.17664v1) |
-| 6 | 🟢 AI / CS | [CLEF HIPE-2026: Evaluating Accurate and Efficient Person-Place Relation Extrac](https://arxiv.org/abs/2602.17663v1) |
-| 7 | 🟡 Economics | [Lies, Labels, and Mechanisms](https://arxiv.org/abs/2602.16973v1) |
-| 8 | 🟡 Economics | [Can Wearable Exoskeletons Reduce Gender and Disability Gaps in the Constructio](https://arxiv.org/abs/2602.16631v1) |
-| 9 | 🔴 Neuroscience | [Probability-Invariant Random Walk Learning on Gyral Folding-Based Cortical Sim](https://arxiv.org/abs/2602.17557v1) |
-| 10 | 🔴 Neuroscience | [Construction of a classification model for dementia among Brazilian adults age](https://arxiv.org/abs/2602.16887v1) |
+_No recent papers fetched._
 <!-- END_TICKER -->
 
 ---
@@ -84,7 +73,7 @@ _([View 3D Structure](https://www.rcsb.org/structure/2HHB))_
 
 ### 🛰️ ISS Live Position
 <!-- START_ISS -->
-<img src="https://quickchart.io/chart?c=%7B%22type%22%3A%22scatter%22%2C%22data%22%3A%7B%22datasets%22%3A%5B%7B%22label%22%3A%22ISS%20Position%20%5Cu2014%20-43.09%5Cu00b0N%20%2034.74%5Cu00b0E%22%2C%22data%22%3A%5B%7B%22x%22%3A34.74%2C%22y%22%3A-43.09%7D%5D%2C%22pointRadius%22%3A12%2C%22pointBackgroundColor%22%3A%22%234FC3F7%22%2C%22pointBorderColor%22%3A%22%23ffffff%22%2C%22pointBorderWidth%22%3A2%7D%5D%7D%2C%22options%22%3A%7B%22title%22%3A%7B%22display%22%3Atrue%2C%22text%22%3A%22%5Cud83d%5Cudef0%5Cufe0f%20ISS%20Live%20Position%22%2C%22fontColor%22%3A%22%23E0E0E0%22%2C%22fontSize%22%3A14%7D%2C%22legend%22%3A%7B%22labels%22%3A%7B%22fontColor%22%3A%22%23B0B0B0%22%7D%7D%2C%22scales%22%3A%7B%22xAxes%22%3A%5B%7B%22ticks%22%3A%7B%22fontColor%22%3A%22%23B0B0B0%22%2C%22min%22%3A-180%2C%22max%22%3A180%7D%2C%22gridLines%22%3A%7B%22color%22%3A%22rgba%28255%2C255%2C255%2C0.07%29%22%7D%2C%22scaleLabel%22%3A%7B%22display%22%3Atrue%2C%22labelString%22%3A%22Longitude%20%28%5Cu00b0%29%22%2C%22fontColor%22%3A%22%239E9E9E%22%7D%7D%5D%2C%22yAxes%22%3A%5B%7B%22ticks%22%3A%7B%22fontColor%22%3A%22%23B0B0B0%22%2C%22min%22%3A-90%2C%22max%22%3A90%7D%2C%22gridLines%22%3A%7B%22color%22%3A%22rgba%28255%2C255%2C255%2C0.07%29%22%7D%2C%22scaleLabel%22%3A%7B%22display%22%3Atrue%2C%22labelString%22%3A%22Latitude%20%28%5Cu00b0%29%22%2C%22fontColor%22%3A%22%239E9E9E%22%7D%7D%5D%7D%7D%7D&w=420&h=300&bkg=%230D1117" width="100%" />
+<img src="https://quickchart.io/chart?c=%7B%22type%22%3A%22scatter%22%2C%22data%22%3A%7B%22datasets%22%3A%5B%7B%22label%22%3A%22ISS%20Position%20%5Cu2014%20-6.4%5Cu00b0N%20%20156.47%5Cu00b0E%22%2C%22data%22%3A%5B%7B%22x%22%3A156.47%2C%22y%22%3A-6.4%7D%5D%2C%22pointRadius%22%3A12%2C%22pointBackgroundColor%22%3A%22%234FC3F7%22%2C%22pointBorderColor%22%3A%22%23ffffff%22%2C%22pointBorderWidth%22%3A2%7D%5D%7D%2C%22options%22%3A%7B%22title%22%3A%7B%22display%22%3Atrue%2C%22text%22%3A%22%5Cud83d%5Cudef0%5Cufe0f%20ISS%20Live%20Position%22%2C%22fontColor%22%3A%22%23E0E0E0%22%2C%22fontSize%22%3A14%7D%2C%22legend%22%3A%7B%22labels%22%3A%7B%22fontColor%22%3A%22%23B0B0B0%22%7D%7D%2C%22scales%22%3A%7B%22xAxes%22%3A%5B%7B%22ticks%22%3A%7B%22fontColor%22%3A%22%23B0B0B0%22%2C%22min%22%3A-180%2C%22max%22%3A180%7D%2C%22gridLines%22%3A%7B%22color%22%3A%22rgba%28255%2C255%2C255%2C0.07%29%22%7D%2C%22scaleLabel%22%3A%7B%22display%22%3Atrue%2C%22labelString%22%3A%22Longitude%20%28%5Cu00b0%29%22%2C%22fontColor%22%3A%22%239E9E9E%22%7D%7D%5D%2C%22yAxes%22%3A%5B%7B%22ticks%22%3A%7B%22fontColor%22%3A%22%23B0B0B0%22%2C%22min%22%3A-90%2C%22max%22%3A90%7D%2C%22gridLines%22%3A%7B%22color%22%3A%22rgba%28255%2C255%2C255%2C0.07%29%22%7D%2C%22scaleLabel%22%3A%7B%22display%22%3Atrue%2C%22labelString%22%3A%22Latitude%20%28%5Cu00b0%29%22%2C%22fontColor%22%3A%22%239E9E9E%22%7D%7D%5D%7D%7D%7D&w=420&h=300&bkg=%230D1117" width="100%" />
 <!-- END_ISS -->
 
 </td>
@@ -94,7 +83,7 @@ _([View 3D Structure](https://www.rcsb.org/structure/2HHB))_
 
 ### 💨 Solar Wind Speed
 <!-- START_SOLAR -->
-<img src="https://quickchart.io/chart?c=%7B%22type%22%3A%22doughnut%22%2C%22data%22%3A%7B%22labels%22%3A%5B%22480%20km/s%20%5Cu2014%20Moderate%22%2C%22Remaining%20range%20%28800%20km/s%20max%29%22%5D%2C%22datasets%22%3A%5B%7B%22data%22%3A%5B480%2C320%5D%2C%22backgroundColor%22%3A%5B%22%23f39c12%22%2C%22rgba%28255%2C255%2C255%2C0.06%29%22%5D%2C%22borderColor%22%3A%5B%22%23f39c12%22%2C%22rgba%28255%2C255%2C255%2C0.04%29%22%5D%2C%22borderWidth%22%3A1%7D%5D%7D%2C%22options%22%3A%7B%22title%22%3A%7B%22display%22%3Atrue%2C%22text%22%3A%22%5Cud83d%5Cudca8%20Solar%20Wind%20Speed%20%5Cu2014%20480%20km/s%22%2C%22fontColor%22%3A%22%23E0E0E0%22%2C%22fontSize%22%3A14%7D%2C%22legend%22%3A%7B%22labels%22%3A%7B%22fontColor%22%3A%22%23B0B0B0%22%7D%7D%2C%22cutoutPercentage%22%3A70%2C%22rotation%22%3A-3.14159%2C%22circumference%22%3A3.14159%7D%7D&w=900&h=300&bkg=%230D1117" width="100%" />
+<img src="https://quickchart.io/chart?c=%7B%22type%22%3A%22doughnut%22%2C%22data%22%3A%7B%22labels%22%3A%5B%22493%20km/s%20%5Cu2014%20Moderate%22%2C%22Remaining%20range%20%28800%20km/s%20max%29%22%5D%2C%22datasets%22%3A%5B%7B%22data%22%3A%5B493%2C307%5D%2C%22backgroundColor%22%3A%5B%22%23f39c12%22%2C%22rgba%28255%2C255%2C255%2C0.06%29%22%5D%2C%22borderColor%22%3A%5B%22%23f39c12%22%2C%22rgba%28255%2C255%2C255%2C0.04%29%22%5D%2C%22borderWidth%22%3A1%7D%5D%7D%2C%22options%22%3A%7B%22title%22%3A%7B%22display%22%3Atrue%2C%22text%22%3A%22%5Cud83d%5Cudca8%20Solar%20Wind%20Speed%20%5Cu2014%20493%20km/s%22%2C%22fontColor%22%3A%22%23E0E0E0%22%2C%22fontSize%22%3A14%7D%2C%22legend%22%3A%7B%22labels%22%3A%7B%22fontColor%22%3A%22%23B0B0B0%22%7D%7D%2C%22cutoutPercentage%22%3A70%2C%22rotation%22%3A-3.14159%2C%22circumference%22%3A3.14159%7D%7D&w=900&h=300&bkg=%230D1117" width="100%" />
 <!-- END_SOLAR -->
 
 </td>
