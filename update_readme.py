@@ -796,30 +796,91 @@ def get_internet_bgp():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SECTION 16 — CRYPTO PRICES (CoinGecko — no key)
+# SECTION 16 — GLOBAL FISHING WATCH (fishing vessel activity, free API key)
 # ══════════════════════════════════════════════════════════════════════════════
-def get_crypto():
+def get_fishing():
     """
-    CoinGecko public API — no API key, 30 req/min free.
+    Global Fishing Watch public API — free registration key.
+    Endpoint: https://globalfishingwatch.org/our-apis/
+    
+    Falls back to GBIF (Global Biodiversity Information Facility) marine
+    species occurrence data — completely no-auth.
+    
+    Also queries FishWatch (NOAA) for fish stock status — no key.
     """
-    url  = ("https://api.coingecko.com/api/v3/simple/price"
-            "?ids=bitcoin,ethereum,solana,binancecoin,cardano,polkadot,chainlink,uniswap"
-            "&vs_currencies=usd&include_24hr_change=true&include_market_cap=true")
-    data = get_json(url)
-    if not data: return "_Crypto data unavailable_"
+    lines = []
 
-    rows = ["| Asset | Price (USD) | 24h Change | Market Cap (B) |",
-            "|:------|------------:|-----------:|---------------:|"]
-    for coin_id, vals in data.items():
-        price  = f"${vals.get('usd', 0):,.2f}"
-        change = vals.get("usd_24h_change", 0) or 0
-        mcap   = vals.get("usd_market_cap", 0) or 0
-        arrow  = "▲" if change > 0 else "▼"
-        sign   = "+" if change > 0 else ""
-        label  = coin_id.replace("binancecoin","BNB").replace("bitcoin","BTC").replace("ethereum","ETH").replace("solana","SOL").replace("cardano","ADA").replace("polkadot","DOT").replace("chainlink","LINK").replace("uniswap","UNI").upper()
-        rows.append(f"| {label} | {price} | {arrow} {sign}{change:.2f}% | ${mcap/1e9:.1f}B |")
-    rows.append("\n<sub>Source: [CoinGecko](https://www.coingecko.com/api/documentation) — public API, no key, 30 req/min</sub>")
-    return "\n".join(rows)
+    # ── NOAA FishWatch — US fish stock status (no auth) ──────────────────────
+    fw = get_json("https://www.fishwatch.gov/api/species")
+    if fw and isinstance(fw, list):
+        # Filter to marine species with stock status info
+        marine = [s for s in fw if s.get("Fishing Rate") and s.get("Population Status")]
+        lines.append("#### US Fish Stock Status — NOAA FishWatch\n")
+        lines.append("| Species | Fishing Rate | Population Status | Habitat |")
+        lines.append("|:--------|:-------------|:------------------|:--------|")
+        for s in marine[:12]:
+            name    = (s.get("Species Name") or s.get("Species Aliases") or "—")[:30]
+            frate   = (s.get("Fishing Rate") or "—")[:25]
+            pop     = (s.get("Population Status") or "—")[:25]
+            habitat = (s.get("Habitat") or "—")[:30]
+            lines.append(f"| {name} | {frate} | {pop} | {habitat} |")
+        lines.append(f"\n_Total species in NOAA database: {len(fw)}_\n")
+
+    # ── GBIF — Marine species occurrence counts (no auth) ────────────────────
+    marine_taxa = [
+        ("Gadus morhua",        "Atlantic Cod"),
+        ("Thunnus thynnus",     "Atlantic Bluefin Tuna"),
+        ("Salmo salar",         "Atlantic Salmon"),
+        ("Clupea harengus",     "Atlantic Herring"),
+        ("Engraulis encrasicolus", "European Anchovy"),
+        ("Scomber scombrus",    "Atlantic Mackerel"),
+        ("Merluccius merluccius","European Hake"),
+        ("Solea solea",         "Common Sole"),
+    ]
+    gbif_rows = []
+    for sci_name, common_name in marine_taxa:
+        url  = (f"https://api.gbif.org/v1/occurrence/search"
+                f"?scientificName={urllib.parse.quote(sci_name)}&limit=1&hasCoordinate=true")
+        data = get_json(url)
+        if data:
+            count = data.get("count", 0)
+            gbif_rows.append((common_name, sci_name, f"{count:,}"))
+
+    if gbif_rows:
+        lines.append("#### GBIF Marine Species — Observation Records\n")
+        lines.append("| Common Name | Scientific Name | GBIF Occurrences |")
+        lines.append("|:------------|:----------------|----------------:|")
+        for common, sci, count in gbif_rows:
+            lines.append(f"| {common} | _{sci}_ | {count} |")
+        lines.append("")
+
+    # ── GBIF — Recent marine occurrence events (last month) ──────────────────
+    from datetime import timedelta
+    today    = datetime.now(timezone.utc)
+    month_ago = (today - timedelta(days=30)).strftime("%Y-%m-%d")
+    today_str = today.strftime("%Y-%m-%d")
+    url_recent = (f"https://api.gbif.org/v1/occurrence/search"
+                  f"?hasCoordinate=true&occurrenceStatus=PRESENT"
+                  f"&taxonKey=11592253"   # Actinopterygii — ray-finned fishes
+                  f"&eventDate={month_ago},{today_str}&limit=1")
+    recent = get_json(url_recent)
+    if recent:
+        count = recent.get("count", 0)
+        lines.append(f"_Ray-finned fish (Actinopterygii) observations in last 30 days: **{count:,}** records_\n")
+
+    # ── Global Fishing Watch vessel stats (public summary, no key needed) ────
+    # GFW public vessel search — basic stats without key
+    gfw = get_json("https://gateway.api.globalfishingwatch.org/v3/vessels/search"
+                   "?query=&datasets[0]=public-global-fishing-watch:v20231026&limit=1")
+    if gfw and gfw.get("total"):
+        total_vessels = gfw["total"]
+        lines.append(f"_Global Fishing Watch — Vessels in public registry: **{total_vessels:,}**_\n")
+
+    if not lines:
+        return "_Fishing data unavailable — NOAA FishWatch and GBIF APIs returned no data_"
+
+    lines.append("\n<sub>Sources: [NOAA FishWatch](https://www.fishwatch.gov/developers) · [GBIF](https://www.gbif.org/developer/occurrence) · [Global Fishing Watch](https://globalfishingwatch.org/our-apis/) — no auth / free key</sub>")
+    return "\n".join(lines)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -994,7 +1055,7 @@ def main():
         ("LIFE_EXP",     get_life_expectancy),
         ("DISEASE",      get_disease_stats),
         ("NEOS",         get_neos),
-        ("CRYPTO",       get_crypto),
+        ("FISHING",      get_fishing),
         ("FOREX",        get_forex),
         ("FLIGHTS",      get_flight_traffic),
         ("GITHUB",       get_github_trending),

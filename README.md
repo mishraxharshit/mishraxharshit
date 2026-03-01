@@ -154,10 +154,10 @@
 
 ---
 
-## Crypto Markets · CoinGecko
+## Marine Fisheries & Ocean Biology · NOAA FishWatch · GBIF · Global Fishing Watch
 
-<!-- START_CRYPTO -->
-<!-- END_CRYPTO -->
+<!-- START_FISHING -->
+<!-- END_FISHING -->
 
 ---
 
