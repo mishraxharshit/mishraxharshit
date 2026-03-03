@@ -1,4 +1,4 @@
-name: Update Dashboard
+name: Update Global Satellite Signal Dashboard
 
 on:
   schedule:
@@ -21,9 +21,13 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Create assets directory
+        run: mkdir -p assets
+
       - name: Run dashboard script
         env:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
         run: |
           python update_readme.py
 
@@ -31,6 +35,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add README.md assets/
-          git diff --quiet && git diff --staged --quiet || git commit -m "Auto update dashboard"
+          git add README.md
+          git add assets/ 2>/dev/null || true
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto update dashboard [$(date -u '+%Y-%m-%d %H:%M UTC')]"
           git push
