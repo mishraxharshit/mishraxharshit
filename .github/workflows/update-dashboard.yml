@@ -15,19 +15,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1 # Sirf latest commit fetch karega (Memory bachaane ke liye)
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: 'pip' # Dependencies ko cache karega taaki build fast ho
 
-      - name: Clean old assets
-        run: |
-          rm -rf assets/* # Purani saari files delete kar dega naye run se pehle
-          mkdir -p assets
+      - name: Create assets directory
+        run: mkdir -p assets
 
       - name: Run dashboard script
         env:
@@ -36,18 +31,11 @@ jobs:
         run: |
           python update_readme.py
 
-      - name: Commit and Force Push (History Cleanup)
+      - name: Commit changes
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          
-          # Check if there are changes
-          git add README.md assets/
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          
-          # Purani history ko overwrite karne ke liye (Optional but helps in keeping repo small)
-          git commit --amend -m "Live Update: $(date -u '+%Y-%m-%d %H:%M UTC')" || git commit -m "Live Update: $(date -u '+%Y-%m-%d %H:%M UTC')"
-          git push --force
+          git add README.md
+          git add assets/ 2>/dev/null || true
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto update dashboard [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git push
