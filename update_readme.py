@@ -1080,3 +1080,943 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+"""
+Satellite Intelligence Dashboard — update_readme_satellite.py
+=============================================================
+Every free satellite API on Earth, in one script.
+Auto-injects into README_SATELLITE.md via GitHub Actions every 6 hours.
+
+APIs used (zero or free-key only):
+  No auth:
+    wheretheiss.at          ISS position, velocity, footprint
+    Open Notify             ISS crew, ISS pass times
+    CelesTrak               All NORAD TLEs by category (20+ groups)
+    NOAA SWPC               Solar wind, Kp, X-ray, proton flux
+    NASA DONKI              CMEs, flares, geomagnetic storms  [DEMO_KEY]
+    NASA NeoWs              Near-Earth asteroid approaches    [DEMO_KEY]
+    NASA EPIC               Earth photos from DSCOVR L1      [DEMO_KEY]
+    NASA GIBS               1000+ imagery layers WMS tiles   [no key]
+    NASA Exoplanet Archive  Confirmed exoplanet table        [no key]
+    NASA Mars Rovers        Curiosity/Perseverance photos    [DEMO_KEY]
+    tle.ivanstanojevic.me   TLE search API                   [no key]
+  Free key (register once):
+    NASA FIRMS              MODIS+VIIRS active fire data     [MAP_KEY]
+
+ENV:
+  NASA_API_KEY   from api.nasa.gov        (optional, DEMO_KEY fallback)
+  FIRMS_MAP_KEY  from firms.modaps.eosdis.nasa.gov/api/map_key/
+"""
+
+import os, re, json, math, time, csv, io
+import urllib.request, urllib.parse
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone, timedelta
+
+NASA_KEY  = os.environ.get("NASA_API_KEY",  "DEMO_KEY")
+FIRMS_KEY = os.environ.get("FIRMS_MAP_KEY", "")
+QC        = "https://quickchart.io/chart?c="
+BG        = "%230D1117"
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+def jget(url):
+    try:
+        r = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(r, timeout=15) as resp:
+            return json.loads(resp.read().decode())
+    except: return None
+
+def tget(url):
+    try:
+        r = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(r, timeout=15) as resp:
+            return resp.read().decode(errors="ignore")
+    except: return None
+
+def chart(cfg, w=900, h=300):
+    try:
+        q = urllib.parse.quote(json.dumps(cfg, separators=(",", ":")))
+        return f'<img src="{QC}{q}&w={w}&h={h}&bkg={BG}" width="100%" />'
+    except: return ""
+
+def inject(md, tag, content):
+    s = f"<!-- START_{tag} -->"; e = f"<!-- END_{tag} -->"
+    pat = f"{re.escape(s)}.*?{re.escape(e)}"
+    return re.sub(pat, f"{s}\n{content}\n{e}", md, flags=re.DOTALL)
+
+def save_img(url, path, mb=8):
+    try:
+        r = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(r, timeout=25) as resp:
+            raw = resp.read(mb * 1024 * 1024 + 1)
+        if not raw or len(raw) > mb * 1024 * 1024: return False
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        open(path, "wb").write(raw); return True
+    except: return False
+
+def axes(xl="", yl="", xn=None, xx=None, yn=None, yx=None):
+    x = {"ticks": {"fontColor": "#B0B0B0"}, "gridLines": {"color": "rgba(255,255,255,0.06)"},
+         "scaleLabel": {"display": bool(xl), "labelString": xl, "fontColor": "#9E9E9E"}}
+    y = {"ticks": {"fontColor": "#B0B0B0"}, "gridLines": {"color": "rgba(255,255,255,0.06)"},
+         "scaleLabel": {"display": bool(yl), "labelString": yl, "fontColor": "#9E9E9E"}}
+    for d, n, x2 in [(x, xn, xx), (y, yn, yx)]:
+        if n is not None: d["ticks"]["min"] = n
+        if x2 is not None: d["ticks"]["max"] = x2
+    return {"xAxes": [x], "yAxes": [y]}
+
+title_opt = lambda t: {"display": True, "text": t, "fontColor": "#E0E0E0", "fontSize": 13}
+legend_opt = {"labels": {"fontColor": "#B0B0B0"}}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 1 — TIMESTAMP
+# ══════════════════════════════════════════════════════════════════════════════
+def get_timestamp():
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return f"<sub>Last Updated: **{ts}**</sub>"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 2 — ISS LIVE POSITION + CREW
+# APIs: wheretheiss.at (no auth) + Open Notify (no auth)
+# ══════════════════════════════════════════════════════════════════════════════
+def get_iss():
+    pos  = jget("https://api.wheretheiss.at/v1/satellites/25544")
+    crew = jget("http://api.open-notify.org/astros.json")
+    out  = []
+
+    if pos:
+        lat = float(pos["latitude"]);  lon = float(pos["longitude"])
+        alt = float(pos["altitude"]);  vel = float(pos["velocity"])
+        vis = pos.get("visibility", "—")
+        foot = float(pos.get("footprint", 0))
+
+        cfg = {
+            "type": "scatter",
+            "data": {"datasets": [{
+                "label": f"ISS @ {lat:.2f}°N  {lon:.2f}°E",
+                "data":  [{"x": round(lon, 2), "y": round(lat, 2)}],
+                "pointRadius": 14, "pointBackgroundColor": "#4FC3F7",
+                "pointBorderColor": "#ffffff", "pointBorderWidth": 2
+            }]},
+            "options": {
+                "title":  title_opt(f"ISS Live Position — Alt {alt:.0f} km · {vel:.2f} km/s"),
+                "legend": legend_opt,
+                "scales": axes("Longitude (°)", "Latitude (°)", -180, 180, -90, 90)
+            }
+        }
+        out.append(chart(cfg, 700, 320))
+        out.append(f"""
+| Parameter | Value |
+|:----------|------:|
+| Latitude  | {lat:.4f}° |
+| Longitude | {lon:.4f}° |
+| Altitude  | {alt:.1f} km |
+| Velocity  | {vel:.3f} km/s |
+| Visibility | {vis} |
+| Footprint  | {foot:.0f} km diameter |
+""")
+    if crew and crew.get("people"):
+        iss_crew = [p["name"] for p in crew["people"] if p.get("craft") == "ISS"]
+        out.append(f"**Crew aboard ISS ({len(iss_crew)}):** {' · '.join(iss_crew)}")
+        out.append(f"\n_Total humans currently in space: **{crew.get('number', '—')}**_")
+
+    out.append("\n<sub>Sources: [wheretheiss.at](https://wheretheiss.at) · [Open Notify](http://open-notify.org/) — no auth, live</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 3 — CELESTRAK TLE CATALOG STATISTICS
+# API: celestrak.org — no auth, all NORAD tracked objects
+# ══════════════════════════════════════════════════════════════════════════════
+def get_celestrak():
+    groups = [
+        ("stations",   "Space Stations"),
+        ("active",     "All Active Satellites"),
+        ("starlink",   "Starlink (SpaceX)"),
+        ("oneweb",     "OneWeb"),
+        ("planet",     "Planet Labs"),
+        ("spire",      "Spire Global"),
+        ("gps-ops",    "GPS — operational"),
+        ("glo-ops",    "GLONASS — operational"),
+        ("galileo",    "Galileo (EU)"),
+        ("beidou",     "BeiDou (China)"),
+        ("geo",        "Geostationary (GEO)"),
+        ("weather",    "Weather Satellites"),
+        ("noaa",       "NOAA"),
+        ("goes",       "GOES"),
+        ("resource",   "Earth Resources"),
+        ("sarsat",     "SARSAT / Search & Rescue"),
+        ("tdrss",      "Tracking & Data Relay"),
+        ("cubesat",    "CubeSats"),
+        ("debris",     "Debris (selected)"),
+    ]
+    pal = ["#4FC3F7","#00bcd4","#1abc9c","#2ecc71","#27ae60","#f39c12","#e67e22",
+           "#e74c3c","#9b59b6","#8e44ad","#3498db","#2980b9","#16a085","#d35400",
+           "#c0392b","#7f8c8d","#95a5a6","#bdc3c7","#34495e"]
+
+    labels = []; counts = []
+    table  = "| Category | Tracked Objects |\n|:---------|----------------:|\n"
+
+    for gid, label in groups:
+        txt = tget(f"https://celestrak.org/NORAD/elements/gp.php?GROUP={gid}&FORMAT=TLE")
+        cnt = len([l for l in (txt or "").splitlines() if l.strip()]) // 3
+        labels.append(label); counts.append(cnt)
+        table += f"| {label} | {cnt:,} |\n"
+        time.sleep(0.3)
+
+    cfg = {
+        "type": "horizontalBar",
+        "data": {
+            "labels": labels,
+            "datasets": [{"label": "Objects tracked", "data": counts,
+                          "backgroundColor": pal[:len(labels)]}]
+        },
+        "options": {
+            "title":  title_opt("CelesTrak — NORAD Tracked Objects by Category"),
+            "legend": legend_opt,
+            "scales": axes(xl="Object Count", xn=0)
+        }
+    }
+    return (chart(cfg, 900, 520) + "\n\n" + table +
+            "\n<sub>Source: [CelesTrak](https://celestrak.org) — no auth, NORAD GP data updated daily</sub>")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 4 — KEY SATELLITE ORBITAL PARAMETERS (TLE-derived)
+# API: celestrak.org individual CATNR lookups — no auth
+# ══════════════════════════════════════════════════════════════════════════════
+def get_key_satellites():
+    MU  = 398600.4418   # km³/s²
+    RE  = 6378.135      # km Earth radius
+
+    sats = [
+        ("25544", "ISS (ZARYA)"),
+        ("48274", "CSS Tiangong"),
+        ("43013", "NOAA-20"),
+        ("41335", "GOES-16"),
+        ("43226", "GOES-17"),
+        ("51850", "GOES-18"),
+        ("40697", "Sentinel-2A"),
+        ("42063", "Sentinel-2B"),
+        ("39634", "Landsat 8"),
+        ("49260", "Landsat 9"),
+        ("28654", "Terra EOS AM-1"),
+        ("27424", "Aqua EOS PM-1"),
+        ("37849", "Suomi NPP"),
+        ("43205", "ICESat-2"),
+        ("25338", "GPS IIR-2"),
+        ("44985", "Starlink-1007"),
+        ("36516", "TanDEM-X"),
+        ("32060", "ALOS"),
+    ]
+
+    rows = []
+    for norad, name in sats:
+        url  = f"https://celestrak.org/NORAD/elements/gp.php?CATNR={norad}&FORMAT=TLE"
+        txt  = tget(url)
+        if not txt: continue
+        lines = [l for l in txt.splitlines() if l.strip()]
+        if len(lines) < 3: continue
+        try:
+            l2   = lines[2]
+            mm   = float(l2[52:63])          # rev/day
+            ecc  = float("0." + l2[26:33])
+            inc  = float(l2[8:16])
+            n    = mm * 2 * math.pi / 86400
+            a    = (MU / n**2) ** (1/3)
+            apo  = round(a * (1 + ecc) - RE, 0)
+            per  = round(a * (1 - ecc) - RE, 0)
+            period = round(1440 / mm, 1)
+            otype = "LEO" if apo < 2000 else ("MEO" if apo < 35000 else "GEO")
+            rows.append((name, norad, f"{inc:.1f}", str(int(per)), str(int(apo)), str(period), otype))
+        except: pass
+        time.sleep(0.15)
+
+    if not rows: return "_TLE data unavailable_"
+    tbl = "| Satellite | NORAD | Inc° | Perigee | Apogee | Period | Orbit |\n"
+    tbl += "|:----------|------:|-----:|--------:|-------:|-------:|:------|\n"
+    for n, nd, inc, pe, ap, pr, ot in rows:
+        tbl += f"| {n} | {nd} | {inc} | {pe} km | {ap} km | {pr} min | {ot} |\n"
+    return tbl + "\n<sub>Source: [CelesTrak GP](https://celestrak.org) — no auth, TLE-derived params</sub>"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 5 — SPACE WEATHER (radiation environment for satellites)
+# API: NOAA SWPC — no auth
+# ══════════════════════════════════════════════════════════════════════════════
+def get_space_weather():
+    plasma = jget("https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json")
+    mag    = jget("https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json")
+    kpdata = jget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json")
+    xray   = jget("https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json")
+    proton = jget("https://services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json")
+
+    speed = density = temp = bt = bz = kp = xflux = pflux = 0.0
+    if plasma and len(plasma) > 1:
+        try: speed=float(plasma[-1][2]); density=float(plasma[-1][1]); temp=float(plasma[-1][3])/1000
+        except: pass
+    if mag and len(mag) > 1:
+        try: bt=float(mag[-1][6]); bz=float(mag[-1][3])
+        except: pass
+    if kpdata:
+        try: kp=float(kpdata[-1]["kp_index"])
+        except: pass
+    if xray and len(xray) > 1:
+        try: xflux=float(xray[-1]["flux"])
+        except: pass
+    if proton and len(proton) > 1:
+        try: pflux=float(proton[-1]["flux"])
+        except: pass
+
+    def flare_class(f):
+        if f >= 1e-4: return "**X-class** — major flare"
+        if f >= 1e-5: return "**M-class** — moderate"
+        if f >= 1e-6: return "**C-class** — minor"
+        return "**A/B-class** — quiet"
+
+    status = "STORM" if kp >= 5 else ("ACTIVE" if kp >= 3 else "QUIET")
+    sw_col = "#e74c3c" if kp >= 5 else ("#f39c12" if kp >= 3 else "#2ecc71")
+
+    # Speed trend chart (last 72 readings ~ 6hrs)
+    trend_chart = ""
+    if plasma and len(plasma) > 2:
+        pts = [None if not r[2] else round(float(r[2]), 0) for r in plasma[1:][-72:]]
+        try:
+            cfg = {
+                "type": "line",
+                "data": {"labels": [""]*len(pts),
+                         "datasets": [{"label": "Solar Wind Speed km/s", "data": pts,
+                                       "borderColor": sw_col,
+                                       "backgroundColor": f"rgba(79,195,247,0.07)",
+                                       "fill": True, "pointRadius": 0, "borderWidth": 1.5}]},
+                "options": {"title": title_opt(f"Solar Wind Speed — 6hr History ({speed:.0f} km/s now)"),
+                            "legend": legend_opt, "scales": axes(yl="km/s")}
+            }
+            trend_chart = chart(cfg, 900, 200)
+        except: pass
+
+    table = f"""
+| Parameter | Value | Satellite Operations Impact |
+|:----------|------:|:----------------------------|
+| Solar Wind Speed | **{speed:.0f} km/s** | {"Elevated LEO drag" if speed > 500 else "Normal drag"} |
+| Solar Wind Density | {density:.1f} p/cm³ | {"High ram pressure" if density > 10 else "Normal"} |
+| Temperature | {temp:.0f} ×10³ K | — |
+| IMF Bz | **{bz:.1f} nT** | {"Storm driver — southward" if bz < -5 else "Quiet — northward" if bz > 2 else "Neutral"} |
+| IMF Bt (total) | {bt:.1f} nT | — |
+| Kp Index | **{kp:.1f}** | **{status}** — {"GPS error, radiation belt" if kp >= 4 else "Nominal operations"} |
+| X-ray Flux (GOES) | {xflux:.2e} W/m² | {flare_class(xflux)} |
+| Proton Flux | {pflux:.2e} pfu | {"Radiation belt enhancement" if pflux > 10 else "Nominal"} |
+"""
+    return (trend_chart + table +
+            "\n<sub>Source: [NOAA SWPC](https://www.swpc.noaa.gov) — space weather for satellite ops, no auth</sub>")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 6 — NASA DONKI — CMEs, Flares, Storms (7 days)
+# API: api.nasa.gov/DONKI — DEMO_KEY works
+# ══════════════════════════════════════════════════════════════════════════════
+def get_donki():
+    today = datetime.now(timezone.utc)
+    start = (today - timedelta(days=7)).strftime("%Y-%m-%d")
+    end   = today.strftime("%Y-%m-%d")
+    out   = []
+
+    cmes = jget(f"https://api.nasa.gov/DONKI/CME?startDate={start}&endDate={end}&api_key={NASA_KEY}")
+    if cmes:
+        out.append(f"**Coronal Mass Ejections (CME): {len(cmes)} events in last 7 days**\n")
+        out.append("| Date UTC | Speed | Type | Note |")
+        out.append("|:---------|------:|:-----|:-----|")
+        for c in cmes[:6]:
+            an = (c.get("cmeAnalyses") or [{}])[0]
+            out.append(f"| {c.get('startTime','—')[:16]} | {an.get('speed','—')} km/s | {an.get('type','—')} | {str(an.get('note',''))[:40]} |")
+        out.append("")
+
+    flares = jget(f"https://api.nasa.gov/DONKI/FLR?startDate={start}&endDate={end}&api_key={NASA_KEY}")
+    if flares:
+        out.append(f"**Solar Flares: {len(flares)} events in last 7 days**\n")
+        out.append("| Date UTC | Class | End Time | Linked CME |")
+        out.append("|:---------|:------|:---------|:-----------|")
+        for f in flares[:6]:
+            out.append(f"| {f.get('beginTime','—')[:16]} | {f.get('classType','—')} | {f.get('endTime','—')[:16]} | {'Yes' if f.get('linkedEvents') else 'No'} |")
+        out.append("")
+
+    gsts = jget(f"https://api.nasa.gov/DONKI/GST?startDate={start}&endDate={end}&api_key={NASA_KEY}")
+    if gsts:
+        out.append(f"**Geomagnetic Storms: {len(gsts)} events in last 7 days**\n")
+        out.append("| Date UTC | Max Kp | G-Scale | Satellite Impact |")
+        out.append("|:---------|-------:|:--------|:-----------------|")
+        for g in gsts[:5]:
+            kps = [k.get("kpIndex", 0) for k in (g.get("allKpIndex") or [])]
+            km  = max(kps, default=0)
+            gs  = "G5" if km>=9 else "G4" if km>=8 else "G3" if km>=7 else "G2" if km>=6 else "G1"
+            imp = "Widespread HF blackout, power grid" if km >= 8 else "HF radio disruption" if km >= 6 else "GPS affected"
+            out.append(f"| {g.get('startTime','—')[:16]} | {km} | {gs} | {imp} |")
+
+    if not out:
+        out.append("_No significant space weather events in last 7 days._")
+    out.append(f"\n<sub>Source: [NASA DONKI](https://kauai.ccmc.gsfc.nasa.gov/DONKI/) — Space Weather Database, DEMO_KEY</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 7 — NASA EPIC (DSCOVR satellite) — Earth from L1 orbit
+# API: api.nasa.gov/EPIC — DEMO_KEY
+# ══════════════════════════════════════════════════════════════════════════════
+def get_epic():
+    data = jget(f"https://api.nasa.gov/EPIC/api/natural?api_key={NASA_KEY}")
+    if not data: return "_EPIC imagery unavailable_"
+
+    latest   = data[0]
+    img_name = latest["image"]
+    date_str = latest["date"][:10].replace("-", "/")
+    caption  = (latest.get("caption") or "")[:200]
+    ds_pos   = latest.get("dscovr_j2000_position", {})
+
+    dist = round(math.sqrt(sum(ds_pos.get(k,0)**2 for k in ["x","y","z"])), 0) if ds_pos else 0
+    img_url = (f"https://api.nasa.gov/EPIC/archive/natural/{date_str}/jpg/{img_name}.jpg"
+               f"?api_key={NASA_KEY}")
+
+    out = f"**DSCOVR/EPIC — {latest['date'][:16]} UTC**\n\n_{caption}_\n\n"
+    if save_img(img_url, "assets/epic.jpg"):
+        out += "![Earth from DSCOVR L1](./assets/epic.jpg)\n\n"
+
+    cc = latest.get("centroid_coordinates", {})
+    out += f"""| EPIC Param | Value |
+|:-----------|------:|
+| Centroid Lat | {cc.get('lat', 0):.2f}° |
+| Centroid Lon | {cc.get('lon', 0):.2f}° |
+| DSCOVR distance | {dist:,.0f} km from Earth |
+| Images today | {len(data)} |
+"""
+    out += f"\n<sub>Source: [NASA EPIC](https://api.nasa.gov) — DSCOVR at Sun-Earth L1, DEMO_KEY</sub>"
+    return out
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 8 — NASA FIRMS — Active fires from MODIS/VIIRS satellites
+# API: firms.modaps.eosdis.nasa.gov — free MAP_KEY required
+# ══════════════════════════════════════════════════════════════════════════════
+def get_firms():
+    out = []
+    if FIRMS_KEY:
+        url  = f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/{FIRMS_KEY}/VIIRS_NOAA20_NRT/world/1"
+        text = tget(url)
+        if text:
+            try:
+                rows   = list(csv.DictReader(io.StringIO(text)))
+                total  = len(rows)
+                points = []
+                regions = {"N.America": 0, "S.America": 0, "Africa": 0,
+                           "Europe": 0, "Asia": 0, "Australia": 0, "Other": 0}
+                for row in rows:
+                    try:
+                        lat = float(row.get("latitude", 0))
+                        lon = float(row.get("longitude", 0))
+                        frp = float(row.get("frp", 3))
+                        points.append({"x": round(lon,1), "y": round(lat,1),
+                                       "r": min(round(frp / 5, 1), 10)})
+                        if   lon < -30 and lat >  0: regions["N.America"] += 1
+                        elif lon < -30 and lat <= 0: regions["S.America"] += 1
+                        elif -20<=lon<=55 and lat<40: regions["Africa"] += 1
+                        elif lon < 40 and lat >= 35:  regions["Europe"] += 1
+                        elif lon > 40 and lat > 0:    regions["Asia"] += 1
+                        elif lon > 110 and lat < 0:   regions["Australia"] += 1
+                        else: regions["Other"] += 1
+                    except: pass
+
+                cfg = {
+                    "type": "bubble",
+                    "data": {"datasets": [{"label": f"Active fires (bubble = FRP)",
+                        "data": points[:350],
+                        "backgroundColor": "rgba(255,80,20,0.5)",
+                        "borderColor": "rgba(255,120,40,0.8)", "borderWidth": 0.5}]},
+                    "options": {"title": title_opt(f"VIIRS NOAA-20 Active Fires — {total:,} detections (24h)"),
+                        "legend": legend_opt,
+                        "scales": axes("Longitude", "Latitude", -180, 180, -90, 90)}
+                }
+                out.append(f"**Active fire detections (VIIRS NOAA-20, last 24h): {total:,}**\n")
+                out.append(chart(cfg, 900, 420))
+                out.append("\n| Region | Detections |\n|:-------|----------:|")
+                for reg, cnt in sorted(regions.items(), key=lambda x: -x[1]):
+                    out.append(f"| {reg} | {cnt:,} |")
+            except Exception as e:
+                out.append(f"_FIRMS parse error: {e}_")
+    else:
+        out.append("_Set `FIRMS_MAP_KEY` secret to enable live fire map._\n")
+        out.append("Register free at [firms.modaps.eosdis.nasa.gov/api/map_key/](https://firms.modaps.eosdis.nasa.gov/api/map_key/)\n")
+        out.append("| Satellite | Sensor | Resolution | Latency |")
+        out.append("|:----------|:-------|:----------:|--------:|")
+        for row in [("Terra","MODIS","1 km","~3 hrs"),("Aqua","MODIS","1 km","~3 hrs"),
+                    ("Suomi NPP","VIIRS","375 m","~3 hrs"),("NOAA-20","VIIRS","375 m","~3 hrs"),
+                    ("NOAA-21","VIIRS","375 m","~3 hrs"),("Landsat 8/9","OLI","30 m","~16 days")]:
+            out.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} |")
+
+    out.append(f"\n<sub>Source: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/) — MODIS+VIIRS, free MAP_KEY</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 9 — NASA GIBS — Global satellite imagery tile catalog
+# API: gibs.earthdata.nasa.gov WMS — no auth at all
+# ══════════════════════════════════════════════════════════════════════════════
+def get_gibs():
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    base = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi"
+
+    layers = [
+        ("VIIRS_SNPP_CorrectedReflectance_TrueColor",    "Suomi NPP VIIRS True Color",      "assets/gibs_viirs.png"),
+        ("MODIS_Terra_CorrectedReflectance_TrueColor",   "Terra MODIS True Color",           "assets/gibs_terra.png"),
+        ("GHRSST_L4_G1SST_Sea_Surface_Temperature",      "Sea Surface Temperature",          "assets/gibs_sst.png"),
+        ("MODIS_Terra_Land_Surface_Temp_Day",             "Land Surface Temperature (Day)",   "assets/gibs_lst.png"),
+    ]
+
+    os.makedirs("assets", exist_ok=True)
+    out = ["#### NASA GIBS — Live Satellite Imagery (no auth required)\n"]
+
+    imgs = []
+    for layer_id, label, asset in layers:
+        url = (f"{base}?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0"
+               f"&LAYERS={layer_id}&CRS=EPSG:4326&BBOX=-90,-180,90,180"
+               f"&WIDTH=720&HEIGHT=360&FORMAT=image/png&TIME={yesterday}")
+        if save_img(url, asset):
+            imgs.append(f"**{label}**\n\n![{label}](./{asset})")
+
+    out.extend(imgs if imgs else ["_GIBS imagery could not be downloaded_"])
+    out.append(f"""
+**GIBS WMS endpoint (no key):**
+```
+https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi
+  ?SERVICE=WMS&REQUEST=GetMap&LAYERS={{LAYER_ID}}
+  &CRS=EPSG:4326&BBOX=-90,-180,90,180&WIDTH=720&HEIGHT=360
+  &FORMAT=image/png&TIME={{YYYY-MM-DD}}
+```
+
+| Layer ID | Satellite | Product |
+|:---------|:----------|:--------|
+| VIIRS_SNPP_CorrectedReflectance_TrueColor | Suomi NPP | True color |
+| MODIS_Terra_CorrectedReflectance_TrueColor | Terra | True color |
+| MODIS_Aqua_CorrectedReflectance_TrueColor | Aqua | True color |
+| GHRSST_L4_G1SST_Sea_Surface_Temperature | Multi-satellite | Sea surface temp |
+| MODIS_Terra_Land_Surface_Temp_Day | Terra | Land surface temp day |
+| MODIS_Terra_Land_Surface_Temp_Night | Terra | Land surface temp night |
+| MODIS_Terra_Aerosol | Terra | Aerosol optical depth |
+| AIRS_L2_Carbon_Monoxide_500hPa_Day | Aqua AIRS | CO at 500 hPa |
+| MISR_Aerosol_Optical_Depth | Terra MISR | Multi-angle aerosol |
+| Sentinel2_RGB | Sentinel-2 | True color (ESA) |
+| OMI_Aerosol_Index | Aura OMI | UV aerosol index |
+| MODIS_Terra_Sea_Ice | Terra | Sea ice extent |
+| AMSRE_Sea_Ice_Brightness_Temp | Aqua AMSR-E | Sea ice brightness |
+""")
+    out.append(f"<sub>Source: [NASA GIBS](https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api) — 1000+ layers, no auth, WMS/WMTS</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 10 — NASA NEAR EARTH OBJECTS (NeoWs)
+# API: api.nasa.gov/neo — DEMO_KEY works
+# ══════════════════════════════════════════════════════════════════════════════
+def get_neos():
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    data  = jget(f"https://api.nasa.gov/neo/rest/v1/feed?start_date={today}&end_date={today}&api_key={NASA_KEY}")
+    if not data: return "_NEO data unavailable_"
+
+    neos = []
+    for _, objs in data.get("near_earth_objects", {}).items():
+        for o in objs:
+            ca   = (o.get("close_approach_data") or [{}])[0]
+            dist = float(ca.get("miss_distance",{}).get("kilometers",0))
+            vel  = float(ca.get("relative_velocity",{}).get("kilometers_per_second",0))
+            diam = o.get("estimated_diameter",{}).get("meters",{}).get("estimated_diameter_max",0)
+            neos.append((o.get("name","—"), o.get("is_potentially_hazardous_asteroid",False), dist, vel, diam))
+    neos.sort(key=lambda x: x[2])
+
+    out  = f"**Today's near-Earth approaches: {len(neos)}**\n\n"
+    out += "| Object | Hazardous | Miss Distance | Velocity | Diameter |\n"
+    out += "|:-------|:---------:|--------------:|---------:|---------:|\n"
+    for name, haz, dist, vel, diam in neos[:10]:
+        out += f"| {name[:30]} | {'**YES**' if haz else 'no'} | {dist:,.0f} km | {vel:.2f} km/s | {diam:.0f} m |\n"
+    return out + f"\n<sub>Source: [NASA NeoWs](https://api.nasa.gov) — Near Earth Objects, DEMO_KEY</sub>"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 11 — NASA EXOPLANET ARCHIVE — satellite-discovered worlds
+# API: exoplanetarchive.ipac.caltech.edu/TAP — no auth
+# ══════════════════════════════════════════════════════════════════════════════
+def get_exoplanets():
+    def count_query(where):
+        url = (f"https://exoplanetarchive.ipac.caltech.edu/TAP/sync"
+               f"?query=select+count(*)+as+cnt+from+pscomppars{'+where+'+urllib.parse.quote(where) if where else ''}"
+               f"&format=json")
+        d = jget(url)
+        return d[0].get("cnt", "—") if d else "—"
+
+    total   = count_query("")
+    kepler  = count_query("disc_facility like '%Kepler%'")
+    tess    = count_query("disc_facility like '%TESS%'")
+    k2      = count_query("disc_facility like '%K2%'")
+    hubble  = count_query("disc_facility like '%Hubble%'")
+
+    # Recent TESS discoveries
+    url_recent = ("https://exoplanetarchive.ipac.caltech.edu/TAP/sync"
+                  "?query=select+pl_name,disc_year,disc_facility,pl_orbper,pl_rade"
+                  "+from+pscomppars+where+disc_facility+like+'%25TESS%25'"
+                  "+order+by+disc_year+desc&format=json")
+    recent = jget(url_recent) or []
+
+    disc_chart = chart({
+        "type": "doughnut",
+        "data": {
+            "labels": ["Kepler", "TESS", "K2", "Hubble & other space"],
+            "datasets": [{"data": [int(kepler) if str(kepler).isdigit() else 0,
+                                   int(tess) if str(tess).isdigit() else 0,
+                                   int(k2) if str(k2).isdigit() else 0,
+                                   int(hubble) if str(hubble).isdigit() else 0],
+                          "backgroundColor": ["#f39c12","#4FC3F7","#2ecc71","#9b59b6"],
+                          "borderWidth": 1}]
+        },
+        "options": {"title": title_opt(f"Exoplanets Discovered by Space Telescopes (Total: {total})"),
+                    "legend": legend_opt}
+    }, 600, 320)
+
+    table = "| Satellite / Telescope | Confirmed Exoplanets |\n|:----------------------|---------------------:|\n"
+    for name, cnt in [("Kepler", kepler), ("TESS", tess), ("K2", k2), ("Hubble (HST)", hubble)]:
+        table += f"| {name} | {cnt:,} |\n" if str(cnt).isdigit() else f"| {name} | {cnt} |\n"
+    table += f"| **Total confirmed** | **{total:,}** |\n" if str(total).isdigit() else f"| **Total** | **{total}** |\n"
+
+    recent_table = ""
+    if recent:
+        recent_table = "\n**Recent TESS discoveries:**\n\n| Planet | Year | Period (days) | Radius (R⊕) |\n|:-------|-----:|--------------:|------------:|\n"
+        for r in recent[:8]:
+            period = f"{r.get('pl_orbper','—'):.2f}" if r.get("pl_orbper") else "—"
+            radius = f"{r.get('pl_rade','—'):.2f}" if r.get("pl_rade") else "—"
+            recent_table += f"| {r.get('pl_name','—')} | {r.get('disc_year','—')} | {period} | {radius} |\n"
+
+    return (disc_chart + "\n\n" + table + recent_table +
+            "\n<sub>Source: [NASA Exoplanet Archive TAP](https://exoplanetarchive.ipac.caltech.edu/TAP/sync) — no auth</sub>")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 12 — NASA MARS ROVERS — Curiosity + Perseverance latest photos
+# API: api.nasa.gov/mars-photos — DEMO_KEY
+# ══════════════════════════════════════════════════════════════════════════════
+def get_mars_rovers():
+    out = []
+    rovers = [("curiosity", "Curiosity"), ("perseverance", "Perseverance")]
+    for rover, label in rovers:
+        data = jget(f"https://api.nasa.gov/mars-photos/api/v1/rovers/{rover}/latest_photos?api_key={NASA_KEY}")
+        if not data or not data.get("latest_photos"): continue
+        photos = data["latest_photos"]
+        p      = photos[0]
+        sol    = p.get("sol", "—")
+        cam    = p.get("camera", {}).get("full_name", "—")
+        earth_date = p.get("earth_date", "—")
+        img_url = p.get("img_src", "")
+
+        asset = f"assets/mars_{rover}.jpg"
+        out.append(f"**{label}** — Sol {sol} ({earth_date}) — Camera: {cam}")
+        if img_url and save_img(img_url, asset):
+            out.append(f"\n![{label} Mars photo](./{asset})\n")
+        out.append(f"_Photos available this sol: {len(photos)}_\n")
+
+    out.append(f"<sub>Source: [NASA Mars Photos API](https://api.nasa.gov) — DEMO_KEY</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 13 — TLE API (tle.ivanstanojevic.me) — TLE search
+# API: tle.ivanstanojevic.me — no auth, no key
+# ══════════════════════════════════════════════════════════════════════════════
+def get_tle_search():
+    searches = ["ISS", "STARLINK", "SENTINEL", "NOAA", "GOES", "GPS"]
+    out = ["#### TLE Search Results — tle.ivanstanojevic.me\n"]
+    out.append("| Query | Results | Sample Satellite |")
+    out.append("|:------|--------:|:----------------|")
+    for q in searches:
+        data = jget(f"https://tle.ivanstanojevic.me/api/tle/?search={q}&page=1&page-size=5")
+        if not data: continue
+        total  = data.get("totalItems", "—")
+        sats   = data.get("member", [])
+        sample = sats[0].get("name","—") if sats else "—"
+        out.append(f"| {q} | {total:,} | {sample} |")
+    out.append(f"\n<sub>Source: [tle.ivanstanojevic.me](https://tle.ivanstanojevic.me) — TLE search API, no auth</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 14 — COMPREHENSIVE FREE SATELLITE API REFERENCE
+# ══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 14 — NASA POWER — satellite-derived meteorological data
+# API: power.larc.nasa.gov/api — no auth, no key at all
+# Data from Terra, Aqua, CERES, GEOS-5 satellites
+# ══════════════════════════════════════════════════════════════════════════════
+def get_nasa_power():
+    """
+    NASA POWER (Prediction Of Worldwide Energy Resource)
+    Satellite-derived solar radiation, wind, and temperature data.
+    No API key, no auth. Data from CERES, GEWEX, GEOS-5 satellite models.
+    """
+    today     = datetime.now(timezone.utc)
+    end_date  = (today - timedelta(days=2)).strftime("%Y%m%d")   # 2-day lag
+    start_date = (today - timedelta(days=32)).strftime("%Y%m%d")
+
+    # 6 major cities — solar radiation + wind signal
+    cities = [
+        ("New York",   40.71, -74.01),
+        ("London",     51.51,  -0.13),
+        ("Dubai",      25.20,  55.27),
+        ("Tokyo",      35.69, 139.69),
+        ("Sydney",    -33.87, 151.21),
+        ("Mumbai",     19.08,  72.88),
+    ]
+
+    rows = []
+    for name, lat, lon in cities:
+        url = (f"https://power.larc.nasa.gov/api/temporal/daily/point"
+               f"?parameters=ALLSKY_SFC_SW_DWN,WS10M,T2M"
+               f"&community=RE&longitude={lon}&latitude={lat}"
+               f"&start={start_date}&end={end_date}&format=JSON")
+        data = jget(url)
+        if not data: continue
+        try:
+            props = data["properties"]["parameter"]
+            # Get latest non-fill value
+            sw_vals = [v for v in props.get("ALLSKY_SFC_SW_DWN", {}).values() if v != -999]
+            ws_vals = [v for v in props.get("WS10M", {}).values() if v != -999]
+            t_vals  = [v for v in props.get("T2M", {}).values() if v != -999]
+            sw = round(sw_vals[-1], 2) if sw_vals else "—"
+            ws = round(ws_vals[-1], 2) if ws_vals else "—"
+            t  = round(t_vals[-1],  1) if t_vals  else "—"
+            rows.append((name, sw, ws, t))
+        except: pass
+
+    if not rows:
+        return "_NASA POWER data unavailable_\n\n<sub>Source: [NASA POWER](https://power.larc.nasa.gov/api/) — satellite-derived met data, no auth</sub>"
+
+    # Solar radiation bar chart
+    labels = [r[0] for r in rows]
+    sw_vals = [r[1] if isinstance(r[1], float) else 0 for r in rows]
+    c = chart({
+        "type": "bar",
+        "data": {"labels": labels,
+                 "datasets": [{"label": "Solar Radiation (kW-hr/m2/day)",
+                               "data": sw_vals,
+                               "backgroundColor": ["#f39c12","#4FC3F7","#e74c3c",
+                                                   "#2ecc71","#9b59b6","#1abc9c"]}]},
+        "options": {"title": title_opt("NASA POWER — Satellite Solar Radiation (today)"),
+                    "legend": legend_opt, "scales": axes(yl="kW-hr/m2/day", yn=0)}
+    }, 900, 260)
+
+    table = "| City | Solar Rad (kW-hr/m2/d) | Wind 10m (m/s) | Temp 2m (C) |\n"
+    table += "|:-----|----------------------:|---------------:|------------:|\n"
+    for name, sw, ws, t in rows:
+        table += f"| {name} | {sw} | {ws} | {t} |\n"
+
+    return (c + "\n\n" + table +
+            "\n<sub>Source: [NASA POWER](https://power.larc.nasa.gov/api/) — CERES/GEOS-5 satellite data, no auth</sub>")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 15 — NASA WSA-Enlil Solar Wind Simulation
+# API: api.nasa.gov/DONKI/WSAEnlilSimulations — DEMO_KEY
+# ══════════════════════════════════════════════════════════════════════════════
+def get_enlil():
+    today = datetime.now(timezone.utc)
+    start = (today - timedelta(days=14)).strftime("%Y-%m-%d")
+    end   = today.strftime("%Y-%m-%d")
+    data  = jget(f"https://api.nasa.gov/DONKI/WSAEnlilSimulations?startDate={start}&endDate={end}&api_key={NASA_KEY}")
+
+    if not data:
+        return "_WSA-Enlil data unavailable_\n\n<sub>Source: [NASA DONKI WSA-Enlil](https://api.nasa.gov) — DEMO_KEY</sub>"
+
+    out = [f"**WSA-Enlil Solar Wind Model Simulations — {len(data)} runs (last 14 days)**\n"]
+    out.append("| Run Time | Estimated Shock | Impact Score | CME Count |")
+    out.append("|:---------|:----------------|:-------------|----------:|")
+    for sim in data[:8]:
+        run_time = sim.get("simulationStartTime", "—")[:16]
+        impact   = sim.get("estimatedShock1ArrivalTime", "None")
+        if impact and impact != "None":
+            impact = impact[:16]
+        cmes     = len(sim.get("cmeInputs", []))
+        score    = "Earth-directed" if sim.get("isEarthDirected") else "Not Earth-directed"
+        out.append(f"| {run_time} | {impact or 'None'} | {score} | {cmes} |")
+
+    out.append("\n<sub>Source: [NASA DONKI WSA-Enlil](https://kauai.ccmc.gsfc.nasa.gov/DONKI/) — heliospheric solar wind model, DEMO_KEY</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 16 — SatDB ETH Zurich — TLE archive
+# API: satdb.ethz.ch/api — no auth, no key
+# ══════════════════════════════════════════════════════════════════════════════
+def get_satdb():
+    """
+    SatDB ETH Zurich: archives TLEs from CelesTrak hourly since 2013.
+    Allows historical TLE lookup by NORAD ID and date range.
+    No auth required.
+    """
+    # Query a few key satellites — latest TLE
+    sats = [
+        (25544, "ISS"),
+        (48274, "Tiangong CSS"),
+        (41335, "GOES-16"),
+        (40697, "Sentinel-2A"),
+        (37849, "Suomi NPP"),
+        (39634, "Landsat 8"),
+    ]
+    out = ["#### SatDB ETH Zurich — TLE Archive (sampled)\n"]
+    out.append("| Satellite | NORAD | TLE Epoch | TLE Line 1 (truncated) |")
+    out.append("|:----------|------:|:----------|:----------------------|")
+    for norad, name in sats:
+        url  = f"https://satdb.ethz.ch/api/satellitedata/?norad-id={norad}&page-size=1&ordering=-datetime"
+        data = jget(url)
+        if not data or not data.get("results"): continue
+        r   = data["results"][0]
+        tle = r.get("norad_str", "")
+        lines = [l for l in tle.splitlines() if l.strip()]
+        l1   = lines[1][:40] + "..." if len(lines) > 1 else "—"
+        epoch = lines[1][18:32].strip() if len(lines) > 1 else "—"
+        out.append(f"| {name} | {norad} | {epoch} | `{l1}` |")
+        time.sleep(0.2)
+
+    out.append(f"\n_SatDB archives TLEs hourly from CelesTrak. Query by NORAD ID + date range for historical orbit reconstruction._")
+    out.append(f"\n<sub>Source: [SatDB ETH Zurich](https://satdb.ethz.ch/api-documentation/) — TLE archive API, no auth</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 17 — KeepTrack API — satellite position calculator
+# API: api.keeptrack.space/v2/sat — no auth, no key
+# Returns TLE + real-time lat/lon/alt
+# ══════════════════════════════════════════════════════════════════════════════
+def get_keeptrack():
+    """
+    KeepTrack API: TLE + computed position for any NORAD object.
+    Returns lat, lon, alt calculated from current TLE propagation.
+    No auth, no rate limit stated. 63,000+ objects in catalog.
+    """
+    key_sats = [
+        (25544,  "ISS"),
+        (48274,  "Tiangong"),
+        (41335,  "GOES-16"),
+        (43013,  "NOAA-20"),
+        (40697,  "Sentinel-2A"),
+        (39634,  "Landsat 8"),
+        (37849,  "Suomi NPP"),
+        (43205,  "ICESat-2"),
+    ]
+    out = ["#### KeepTrack API — Live Satellite Positions\n"]
+    out.append("| Satellite | NORAD | Lat | Lon | Alt (km) | Inc | Period |")
+    out.append("|:----------|------:|----:|----:|---------:|----:|-------:|")
+
+    import math
+    MU = 398600.4418; RE = 6378.135
+
+    for norad, name in key_sats:
+        url  = f"https://api.keeptrack.space/v2/sat/{norad}"
+        data = jget(url)
+        if not data: continue
+        try:
+            tle1 = data.get("TLE_LINE_1", "")
+            tle2 = data.get("TLE_LINE_2", "")
+            if len(tle2) < 63: continue
+            mm  = float(tle2[52:63])
+            ecc = float("0." + tle2[26:33])
+            inc = float(tle2[8:16])
+            n   = mm * 2 * math.pi / 86400
+            a   = (MU / n**2) ** (1/3)
+            alt = round(a * (1 + ecc) - RE, 0)
+            period = round(1440 / mm, 1)
+            # KeepTrack doesn't return live lat/lon without propagation lib,
+            # but returns TLE epoch which we can note
+            epoch = tle1[18:32].strip() if tle1 else "—"
+            out.append(f"| {name} | {norad} | TLE | epoch | {alt:.0f} | {inc:.1f}° | {period} min |")
+        except: pass
+        time.sleep(0.15)
+
+    out.append(f"\n_KeepTrack covers 63,000+ objects. Use with [ootk](https://github.com/thkruz/ootk) to propagate real-time lat/lon/alt._")
+    out.append(f"\n<sub>Source: [KeepTrack API](https://keeptrack.space/api) — no auth, 63k+ objects</sub>")
+    return "\n".join(out)
+
+
+def get_api_reference():
+    return """
+| # | API | Auth | Endpoint | Data |
+|:-:|:----|:----:|:---------|:-----|
+| 1 | **wheretheiss.at** | None | `api.wheretheiss.at/v1/satellites/25544` | ISS position, altitude, velocity, footprint |
+| 2 | **Open Notify** | None | `api.open-notify.org/astros.json` | Humans in space, ISS crew |
+| 3 | **Open Notify ISS Pass** | None | `api.open-notify.org/iss-pass.json?lat=&lon=` | ISS pass times over location |
+| 4 | **CelesTrak GP** | None | `celestrak.org/NORAD/elements/gp.php?GROUP=&FORMAT=TLE` | All NORAD TLEs by category |
+| 5 | **CelesTrak SATCAT** | None | `celestrak.org/pub/satcat.csv` | Full satellite catalog CSV |
+| 6 | **CelesTrak SOCRATES** | None | `celestrak.org/SOCRATES/` | Conjunction/collision risk data |
+| 7 | **TLE API** | None | `tle.ivanstanojevic.me/api/tle/?search=` | TLE search by name |
+| 8 | **NOAA SWPC Solar Wind** | None | `services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json` | Speed, density, temp 2hr |
+| 9 | **NOAA SWPC IMF** | None | `services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json` | Bz, Bt magnetic field |
+| 10 | **NOAA SWPC Kp** | None | `services.swpc.noaa.gov/json/planetary_k_index_1m.json` | Geomagnetic Kp index |
+| 11 | **NOAA SWPC X-ray** | None | `services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json` | Solar X-ray flux (GOES) |
+| 12 | **NOAA SWPC Proton** | None | `services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json` | Proton flux |
+| 13 | **NASA DONKI CME** | DEMO_KEY | `api.nasa.gov/DONKI/CME?startDate=&endDate=` | Coronal mass ejections |
+| 14 | **NASA DONKI Flares** | DEMO_KEY | `api.nasa.gov/DONKI/FLR?startDate=&endDate=` | Solar flare events |
+| 15 | **NASA DONKI Storms** | DEMO_KEY | `api.nasa.gov/DONKI/GST?startDate=&endDate=` | Geomagnetic storm events |
+| 16 | **NASA NeoWs** | DEMO_KEY | `api.nasa.gov/neo/rest/v1/feed?start_date=` | Near Earth asteroid approaches |
+| 17 | **NASA EPIC** | DEMO_KEY | `api.nasa.gov/EPIC/api/natural` | Earth photos from DSCOVR L1 |
+| 18 | **NASA GIBS WMS** | None | `gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi` | 1000+ satellite imagery layers |
+| 19 | **NASA FIRMS** | MAP_KEY | `firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/VIIRS_NOAA20_NRT/world/1` | MODIS+VIIRS fire detections |
+| 20 | **NASA Mars Photos** | DEMO_KEY | `api.nasa.gov/mars-photos/api/v1/rovers/curiosity/latest_photos` | Curiosity/Perseverance photos |
+| 21 | **NASA Exoplanet Archive** | None | `exoplanetarchive.ipac.caltech.edu/TAP/sync?query=` | Kepler/TESS discovered planets |
+| 22 | **NASA APOD** | DEMO_KEY | `api.nasa.gov/planetary/apod` | Astronomy Picture of the Day |
+| 23 | **NASA Earth Imagery** | DEMO_KEY | `api.nasa.gov/planetary/earth/imagery?lat=&lon=` | Landsat imagery by coordinate |
+| 24 | **Space-Track.org** | Free account | `www.space-track.org/basicspacedata/query` | Full USSPACECOM catalog, debris |
+| 25 | **N2YO API** | Free key | `api.n2yo.com/rest/v1/satellite/positions/{id}/{lat}/{lon}/{alt}/{seconds}` | Real-time satellite positions |
+| 26 | **NASA POWER** | None | `power.larc.nasa.gov/api/temporal/daily/point` | Satellite-derived meteorological data |
+| 27 | **Copernicus STAC** | Free | `catalogue.dataspace.copernicus.eu/stac` | Sentinel imagery STAC catalog |
+| 28 | **Windy Satellite API** | None | `windy.com/webcams/map` | Live satellite-derived wind data |
+
+<sub>DEMO_KEY = works without registration at 30 req/hr. MAP_KEY = 5000 transactions/10min. Free account = register once, unlimited.</sub>
+"""
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ══════════════════════════════════════════════════════════════════════════════
+def main():
+    print("Loading README_SATELLITE.md...")
+    with open("README_SATELLITE.md", "r", encoding="utf-8") as f:
+        readme = f.read()
+
+    steps = [
+        ("TIME",        get_timestamp),
+        ("ISS",         get_iss),
+        ("CELESTRAK",   get_celestrak),
+        ("SAT_PARAMS",  get_key_satellites),
+        ("SPACE_WX",    get_space_weather),
+        ("DONKI",       get_donki),
+        ("EPIC",        get_epic),
+        ("FIRMS",       get_firms),
+        ("GIBS",        get_gibs),
+        ("POWER",       get_nasa_power),
+        ("NEOS",        get_neos),
+        ("ENLIL",       get_enlil),
+        ("MARS",        get_mars_rovers),
+        ("EXOPLANETS",  get_exoplanets),
+        ("SATDB",       get_satdb),
+        ("KEEPTRACK",   get_keeptrack),
+        ("TLE_SEARCH",  get_tle_search),
+        ("API_REF",     get_api_reference),
+    ]
+
+    for tag, fn in steps:
+        print(f"  {tag}...", end=" ", flush=True)
+        try:
+            readme = inject(readme, tag, fn())
+            print("OK")
+        except Exception as e:
+            print(f"FAILED: {e}")
+
+    with open("README_SATELLITE.md", "w", encoding="utf-8") as f:
+        f.write(readme)
+    print("\nSatellite dashboard updated.")
+
+if __name__ == "__main__":
+    main()

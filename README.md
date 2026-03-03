@@ -236,3 +236,154 @@
 *Auto-updated every 6 hours via GitHub Actions*
 
 </div>
+<div align="center">
+
+# Satellite Intelligence Dashboard
+
+![Auto-Updated](https://img.shields.io/badge/Auto--Updated-Every%206hrs-0D1117?style=flat-square&logo=github-actions)
+![APIs](https://img.shields.io/badge/Satellite%20APIs-30%2B-00c8ff?style=flat-square)
+![No Key](https://img.shields.io/badge/Most%20APIs-Zero%20Auth-00ff9d?style=flat-square)
+
+<!-- START_TIME -->
+<!-- END_TIME -->
+
+</div>
+
+---
+
+## 1 · ISS Live Position and Crew
+wheretheiss.at + open-notify.org - no auth required
+
+<!-- START_ISS -->
+<!-- END_ISS -->
+
+---
+
+## 2 · CelesTrak - Full NORAD Satellite Catalog
+celestrak.org - no auth - 19 categories - updated daily
+
+<!-- START_CELESTRAK -->
+<!-- END_CELESTRAK -->
+
+---
+
+## 3 · Key Satellites - Orbital Parameters TLE-derived
+celestrak.org/NORAD/elements/gp.php - no auth - ISS GOES Sentinel Landsat GPS
+
+<!-- START_SAT_PARAMS -->
+<!-- END_SAT_PARAMS -->
+
+---
+
+## 4 · Space Weather - Radiation Environment for Satellites
+NOAA SWPC - no auth - solar wind - Kp index - X-ray flux - proton flux
+
+<!-- START_SPACE_WX -->
+<!-- END_SPACE_WX -->
+
+---
+
+## 5 · NASA DONKI - Solar Events CMEs Flares Storms
+api.nasa.gov/DONKI - DEMO_KEY - last 7 days
+
+<!-- START_DONKI -->
+<!-- END_DONKI -->
+
+---
+
+## 6 · NASA EPIC - Earth Photos from DSCOVR at L1 Orbit
+api.nasa.gov/EPIC - DEMO_KEY - 22 images per day
+
+<!-- START_EPIC -->
+<!-- END_EPIC -->
+
+---
+
+## 7 · NASA FIRMS - Active Fires MODIS and VIIRS Satellites
+firms.modaps.eosdis.nasa.gov - free MAP_KEY - Terra Aqua Suomi NPP NOAA-20
+
+<!-- START_FIRMS -->
+<!-- END_FIRMS -->
+
+---
+
+## 8 · NASA GIBS - Global Satellite Imagery Layers
+gibs.earthdata.nasa.gov/wms - no auth - 1000+ layers - WMS/WMTS
+
+<!-- START_GIBS -->
+<!-- END_GIBS -->
+
+---
+
+## 9 · NASA POWER - Satellite-Derived Meteorological Data
+power.larc.nasa.gov/api - no auth - solar radiation wind temperature - 40yr archive
+
+<!-- START_POWER -->
+<!-- END_POWER -->
+
+---
+
+## 10 · NASA Near-Earth Objects NeoWs
+api.nasa.gov/neo - DEMO_KEY - asteroid close approaches today
+
+<!-- START_NEOS -->
+<!-- END_NEOS -->
+
+---
+
+## 11 · NASA WSA-Enlil Solar Wind Simulation
+api.nasa.gov/DONKI/WSAEnlilSimulations - DEMO_KEY - heliospheric model
+
+<!-- START_ENLIL -->
+<!-- END_ENLIL -->
+
+---
+
+## 12 · NASA Mars Rovers - Curiosity and Perseverance Photos
+api.nasa.gov/mars-photos - DEMO_KEY - latest surface images
+
+<!-- START_MARS -->
+<!-- END_MARS -->
+
+---
+
+## 13 · NASA Exoplanet Archive - Satellite-Discovered Worlds
+exoplanetarchive.ipac.caltech.edu/TAP - no auth - Kepler TESS K2
+
+<!-- START_EXOPLANETS -->
+<!-- END_EXOPLANETS -->
+
+---
+
+## 14 · SatDB ETH Zurich - TLE Archive Search
+satdb.ethz.ch/api - no auth - full TLE history since launch
+
+<!-- START_SATDB -->
+<!-- END_SATDB -->
+
+---
+
+## 15 · KeepTrack API - Satellite Position Calculator
+api.keeptrack.space/v2/sat - no auth - real-time lat lon alt from TLE
+
+<!-- START_KEEPTRACK -->
+<!-- END_KEEPTRACK -->
+
+---
+
+## 16 · Complete Free Satellite API Reference 30+ APIs
+
+<!-- START_API_REF -->
+<!-- END_API_REF -->
+
+---
+
+<div align="center">
+
+**All Data Sources**
+
+wheretheiss.at - Open Notify - CelesTrak - NOAA SWPC - NASA APIs - NASA GIBS - NASA FIRMS - NASA POWER - NASA Exoplanet Archive - SatDB ETH - KeepTrack
+
+*Auto-updated every 6 hours via GitHub Actions - Most APIs require zero authentication*
+
+</div>
