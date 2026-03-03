@@ -311,12 +311,36 @@
 </tr>
 </table>
 
+
 ---
 
-## Complete Free Satellite & Data API Reference
+---
 
-<!-- START_API_REF -->
-<!-- END_API_REF -->
+## Quote of the Day
+
+<!-- START_QUOTE -->
+<!-- END_QUOTE -->
+
+---
+
+## On This Day in History · Wikipedia
+
+<!-- START_ON_THIS_DAY -->
+<!-- END_ON_THIS_DAY -->
+
+---
+
+## Historical Patterns — 200+ Years · Solar · Earthquake · Climate · CO₂
+
+<!-- START_HISTORY -->
+<!-- END_HISTORY -->
+
+---
+
+## Nobel Prizes & Science Data · Nobel API
+
+<!-- START_NOBEL -->
+<!-- END_NOBEL -->
 
 ---
 
@@ -330,7 +354,7 @@
 
 **Data Sources**
 
-[NOAA SWPC](https://www.swpc.noaa.gov) · [USGS](https://earthquake.usgs.gov) · [wheretheiss.at](https://wheretheiss.at) · [Open Notify](http://open-notify.org) · [CelesTrak](https://celestrak.org) · [NASA APIs](https://api.nasa.gov) · [NASA GIBS](https://www.earthdata.nasa.gov) · [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov) · [NASA POWER](https://power.larc.nasa.gov) · [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu) · [SatDB ETH](https://satdb.ethz.ch) · [KeepTrack](https://keeptrack.space) · [arXiv](https://arxiv.org) · [Open-Meteo](https://open-meteo.com) · [World Bank](https://data.worldbank.org) · [NASA GISS](https://data.giss.nasa.gov) · [NOAA GML](https://gml.noaa.gov) · [disease.sh](https://disease.sh) · [Frankfurter](https://www.frankfurter.app) · [OpenSky](https://opensky-network.org) · [GitHub](https://docs.github.com/en/rest) · [Wikimedia](https://wikimedia.org/api/rest_v1) · [RCSB PDB](https://www.rcsb.org) · [REST Countries](https://restcountries.com) · [GBIF](https://www.gbif.org) · [NOAA FishWatch](https://www.fishwatch.gov)
+[NOAA SWPC](https://www.swpc.noaa.gov) · [USGS](https://earthquake.usgs.gov) · [wheretheiss.at](https://wheretheiss.at) · [Open Notify](http://open-notify.org) · [CelesTrak](https://celestrak.org) · [NASA APIs](https://api.nasa.gov) · [NASA GIBS](https://www.earthdata.nasa.gov) · [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov) · [NASA POWER](https://power.larc.nasa.gov) · [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu) · [SatDB ETH](https://satdb.ethz.ch) · [KeepTrack](https://keeptrack.space) · [arXiv](https://arxiv.org) · [Open-Meteo](https://open-meteo.com) · [World Bank](https://data.worldbank.org) · [NASA GISS](https://data.giss.nasa.gov) · [NOAA GML](https://gml.noaa.gov) · [disease.sh](https://disease.sh) · [Frankfurter](https://www.frankfurter.app) · [OpenSky](https://opensky-network.org) · [GitHub](https://docs.github.com/en/rest) · [Wikimedia](https://wikimedia.org/api/rest_v1) · [RCSB PDB](https://www.rcsb.org) · [REST Countries](https://restcountries.com) · [GBIF](https://www.gbif.org) · [NOAA FishWatch](https://www.fishwatch.gov) · [Nobel Prize API](https://api.nobelprize.org) · [Wikipedia API](https://en.wikipedia.org/api/rest_v1) · [ZenQuotes](https://zenquotes.io)
 
 *Auto-updated every 6 hours via GitHub Actions · Most APIs require zero authentication*
 

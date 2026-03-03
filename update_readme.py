@@ -925,27 +925,35 @@ def get_iss():
     return "\n".join(out)
 
 def get_space_weather():
-    plasma = jget("https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json")
-    mag    = jget("https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json")
-    kpdata = jget("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json")
-    xray   = jget("https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json")
-    proton = jget("https://services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json")
+    plasma = get_json("https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json")
+    mag    = get_json("https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json")
+    kpdata = get_json("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json")
+    xray   = get_json("https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json")
+    proton = get_json("https://services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json")
 
     speed = density = temp = bt = bz = kp = xflux = pflux = 0.0
+    speed_hist = []
+
     if plasma and len(plasma) > 1:
-        try: speed=float(plasma[-1][2]); density=float(plasma[-1][1]); temp=float(plasma[-1][3])/1000
+        for row in plasma[1:]:
+            try: speed_hist.append(round(float(row[2]), 0))
+            except: pass
+        try:
+            speed   = float(plasma[-1][2])
+            density = float(plasma[-1][1])
+            temp    = float(plasma[-1][3]) / 1000
         except: pass
     if mag and len(mag) > 1:
-        try: bt=float(mag[-1][6]); bz=float(mag[-1][3])
+        try: bt = float(mag[-1][6]); bz = float(mag[-1][3])
         except: pass
     if kpdata:
-        try: kp=float(kpdata[-1]["kp_index"])
+        try: kp = float(kpdata[-1]["kp_index"])
         except: pass
     if xray and len(xray) > 1:
-        try: xflux=float(xray[-1]["flux"])
+        try: xflux = float(xray[-1]["flux"])
         except: pass
     if proton and len(proton) > 1:
-        try: pflux=float(proton[-1]["flux"])
+        try: pflux = float(proton[-1]["flux"])
         except: pass
 
     def flare_class(f):
@@ -957,22 +965,27 @@ def get_space_weather():
     status = "STORM" if kp >= 5 else ("ACTIVE" if kp >= 3 else "QUIET")
     sw_col = "#e74c3c" if kp >= 5 else ("#f39c12" if kp >= 3 else "#2ecc71")
 
-    # Speed trend chart (last 72 readings ~ 6hrs)
+    # FIX: limit to 25 pts to keep QuickChart URL short enough to render
     trend_chart = ""
-    if plasma and len(plasma) > 2:
-        pts = [None if not r[2] else round(float(r[2]), 0) for r in plasma[1:][-72:]]
+    pts = speed_hist[-25:]
+    if len(pts) >= 5:
         try:
             cfg = {
                 "type": "line",
-                "data": {"labels": [""]*len(pts),
-                         "datasets": [{"label": "Solar Wind Speed km/s", "data": pts,
-                                       "borderColor": sw_col,
-                                       "backgroundColor": f"rgba(79,195,247,0.07)",
-                                       "fill": True, "pointRadius": 0, "borderWidth": 1.5}]},
-                "options": {"title": title_opt(f"Solar Wind Speed — 6hr History ({speed:.0f} km/s now)"),
-                            "legend": legend_opt, "scales": axes(yl="km/s")}
+                "data": {
+                    "labels": list(range(len(pts))),
+                    "datasets": [{"label": "Solar Wind Speed (km/s)", "data": pts,
+                                  "borderColor": sw_col,
+                                  "backgroundColor": "rgba(79,195,247,0.07)",
+                                  "fill": True, "pointRadius": 0, "borderWidth": 2}]
+                },
+                "options": {
+                    "title":  _title(f"Solar Wind Speed — Recent Readings ({speed:.0f} km/s now)"),
+                    "legend": _legend(),
+                    "scales": _axes(y_label="km/s")
+                }
             }
-            trend_chart = chart(cfg, 900, 200)
+            trend_chart = make_chart(cfg, 900, 200)
         except: pass
 
     table = f"""
@@ -983,12 +996,12 @@ def get_space_weather():
 | Temperature | {temp:.0f} ×10³ K | — |
 | IMF Bz | **{bz:.1f} nT** | {"Storm driver — southward" if bz < -5 else "Quiet — northward" if bz > 2 else "Neutral"} |
 | IMF Bt (total) | {bt:.1f} nT | — |
-| Kp Index | **{kp:.1f}** | **{status}** — {"GPS error, radiation belt" if kp >= 4 else "Nominal operations"} |
+| Kp Index | **{kp:.1f}** | **{status}** — {"GPS disruption, radiation belt" if kp >= 4 else "Nominal satellite ops"} |
 | X-ray Flux (GOES) | {xflux:.2e} W/m² | {flare_class(xflux)} |
 | Proton Flux | {pflux:.2e} pfu | {"Radiation belt enhancement" if pflux > 10 else "Nominal"} |
 """
     return (trend_chart + table +
-            "\n<sub>Source: [NOAA SWPC](https://www.swpc.noaa.gov) — space weather for satellite ops, no auth</sub>")
+            "\n<sub>Source: [NOAA SWPC](https://www.swpc.noaa.gov) — solar wind plasma · IMF mag · Kp · GOES X-ray · proton, no auth</sub>")
 
 def get_neos():
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -1559,41 +1572,261 @@ def get_keeptrack():
     out.append(f"\n<sub>Source: [KeepTrack API](https://keeptrack.space/api) — no auth, 63k+ objects</sub>")
     return "\n".join(out)
 
-def get_api_reference():
-    return """
-| # | API | Auth | Endpoint | Data |
-|:-:|:----|:----:|:---------|:-----|
-| 1 | **wheretheiss.at** | None | `api.wheretheiss.at/v1/satellites/25544` | ISS position, altitude, velocity, footprint |
-| 2 | **Open Notify** | None | `api.open-notify.org/astros.json` | Humans in space, ISS crew |
-| 3 | **Open Notify ISS Pass** | None | `api.open-notify.org/iss-pass.json?lat=&lon=` | ISS pass times over location |
-| 4 | **CelesTrak GP** | None | `celestrak.org/NORAD/elements/gp.php?GROUP=&FORMAT=TLE` | All NORAD TLEs by category |
-| 5 | **CelesTrak SATCAT** | None | `celestrak.org/pub/satcat.csv` | Full satellite catalog CSV |
-| 6 | **CelesTrak SOCRATES** | None | `celestrak.org/SOCRATES/` | Conjunction/collision risk data |
-| 7 | **TLE API** | None | `tle.ivanstanojevic.me/api/tle/?search=` | TLE search by name |
-| 8 | **NOAA SWPC Solar Wind** | None | `services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json` | Speed, density, temp 2hr |
-| 9 | **NOAA SWPC IMF** | None | `services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json` | Bz, Bt magnetic field |
-| 10 | **NOAA SWPC Kp** | None | `services.swpc.noaa.gov/json/planetary_k_index_1m.json` | Geomagnetic Kp index |
-| 11 | **NOAA SWPC X-ray** | None | `services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json` | Solar X-ray flux (GOES) |
-| 12 | **NOAA SWPC Proton** | None | `services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json` | Proton flux |
-| 13 | **NASA DONKI CME** | DEMO_KEY | `api.nasa.gov/DONKI/CME?startDate=&endDate=` | Coronal mass ejections |
-| 14 | **NASA DONKI Flares** | DEMO_KEY | `api.nasa.gov/DONKI/FLR?startDate=&endDate=` | Solar flare events |
-| 15 | **NASA DONKI Storms** | DEMO_KEY | `api.nasa.gov/DONKI/GST?startDate=&endDate=` | Geomagnetic storm events |
-| 16 | **NASA NeoWs** | DEMO_KEY | `api.nasa.gov/neo/rest/v1/feed?start_date=` | Near Earth asteroid approaches |
-| 17 | **NASA EPIC** | DEMO_KEY | `api.nasa.gov/EPIC/api/natural` | Earth photos from DSCOVR L1 |
-| 18 | **NASA GIBS WMS** | None | `gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi` | 1000+ satellite imagery layers |
-| 19 | **NASA FIRMS** | MAP_KEY | `firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/VIIRS_NOAA20_NRT/world/1` | MODIS+VIIRS fire detections |
-| 20 | **NASA Mars Photos** | DEMO_KEY | `api.nasa.gov/mars-photos/api/v1/rovers/curiosity/latest_photos` | Curiosity/Perseverance photos |
-| 21 | **NASA Exoplanet Archive** | None | `exoplanetarchive.ipac.caltech.edu/TAP/sync?query=` | Kepler/TESS discovered planets |
-| 22 | **NASA APOD** | DEMO_KEY | `api.nasa.gov/planetary/apod` | Astronomy Picture of the Day |
-| 23 | **NASA Earth Imagery** | DEMO_KEY | `api.nasa.gov/planetary/earth/imagery?lat=&lon=` | Landsat imagery by coordinate |
-| 24 | **Space-Track.org** | Free account | `www.space-track.org/basicspacedata/query` | Full USSPACECOM catalog, debris |
-| 25 | **N2YO API** | Free key | `api.n2yo.com/rest/v1/satellite/positions/{id}/{lat}/{lon}/{alt}/{seconds}` | Real-time satellite positions |
-| 26 | **NASA POWER** | None | `power.larc.nasa.gov/api/temporal/daily/point` | Satellite-derived meteorological data |
-| 27 | **Copernicus STAC** | Free | `catalogue.dataspace.copernicus.eu/stac` | Sentinel imagery STAC catalog |
-| 28 | **Windy Satellite API** | None | `windy.com/webcams/map` | Live satellite-derived wind data |
 
-<sub>DEMO_KEY = works without registration at 30 req/hr. MAP_KEY = 5000 transactions/10min. Free account = register once, unlimited.</sub>
-"""
+
+# ══════════════════════════════════════════════════════════════════════════════
+# QUOTE OF THE DAY · ZenQuotes + Quotable (free, no auth)
+# ══════════════════════════════════════════════════════════════════════════════
+def get_quote_of_day():
+    data = get_json("https://zenquotes.io/api/today")
+    if data and isinstance(data, list):
+        q = data[0]
+        quote = q.get("q",""); author = q.get("a","Unknown")
+        if quote:
+            return f'> *\"{quote}\"*\n>\n> — **{author}**\n\n<sub>Source: [ZenQuotes.io](https://zenquotes.io) — free, no auth</sub>'
+    data2 = get_json("https://api.quotable.io/quotes/random?limit=1")
+    if data2 and isinstance(data2, list):
+        q = data2[0]
+        quote = q.get("content",""); author = q.get("author","Unknown")
+        tags = ", ".join(q.get("tags",[])[:3])
+        if quote:
+            return (f'> *\"{quote}\"*\n>\n> — **{author}**\n\n'
+                    f'_{tags}_\n\n<sub>Source: [Quotable.io](https://api.quotable.io) — free, no auth</sub>')
+    return "_Quote unavailable today_"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ON THIS DAY IN HISTORY · Wikipedia REST API (free, no auth)
+# ══════════════════════════════════════════════════════════════════════════════
+def get_on_this_day():
+    today = datetime.now(timezone.utc)
+    mm = today.strftime("%m"); dd = today.strftime("%d")
+    data = get_json(f"https://en.wikipedia.org/api/rest_v1/feed/onthisday/all/{mm}/{dd}")
+    if not data: return "_On This Day data unavailable_"
+    out = [f"### On This Day — {today.strftime('%B %d')}\n"]
+    events = sorted(data.get("events",[]), key=lambda x: x.get("year",0), reverse=True)
+    if events:
+        out.append("**Notable Events**\n")
+        out.append("| Year | Event |"); out.append("|-----:|:------|")
+        for e in events[:8]:
+            year = e.get("year","—"); text = (e.get("text") or "—")[:90]
+            pages = e.get("pages",[])
+            link = pages[0].get("content_urls",{}).get("desktop",{}).get("page","") if pages else ""
+            out.append(f"| {year} | [{text[:70]}...]({link}) |" if link else f"| {year} | {text}... |")
+        out.append("")
+    births = sorted(data.get("births",[]), key=lambda x: x.get("year",0), reverse=True)
+    if births:
+        out.append("**Notable Births**\n")
+        out.append("| Year | Person |"); out.append("|-----:|:-------|")
+        for b in births[:5]:
+            out.append(f"| {b.get('year','—')} | {(b.get('text') or '—')[:75]} |")
+        out.append("")
+    deaths = sorted(data.get("deaths",[]), key=lambda x: x.get("year",0), reverse=True)
+    if deaths:
+        out.append("**Notable Deaths**\n")
+        out.append("| Year | Person |"); out.append("|-----:|:-------|")
+        for d in deaths[:5]:
+            out.append(f"| {d.get('year','—')} | {(d.get('text') or '—')[:75]} |")
+    out.append(f"\n<sub>Source: [Wikipedia On This Day](https://en.wikipedia.org/api/rest_v1/#/Feed/onThisDay) — free, no auth</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HISTORICAL PATTERNS — 200+ Year Data
+# Solar cycles (NOAA), Earthquakes (USGS), Temperature (NASA GISS), CO2 (NOAA)
+# Goal: Show cyclical patterns, probability of recurrence
+# ══════════════════════════════════════════════════════════════════════════════
+def get_historical_patterns():
+    out = []
+
+    # ── 1. SOLAR CYCLE HISTORY 1749-present (NOAA SWPC) ──────────────────────
+    solar = get_json("https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json")
+    if solar and isinstance(solar, list):
+        yearly = {}
+        for rec in solar:
+            try:
+                yr  = int(rec.get("time-tag","")[:4])
+                ssn = float(rec.get("smoothed_ssn", 0) or 0)
+                if yr >= 1749 and (yr not in yearly or ssn > yearly[yr]):
+                    yearly[yr] = ssn
+            except: pass
+        yrs = sorted(yearly); vals = [yearly[y] for y in yrs]
+        # Downsample: every 3rd point for clean URL
+        yd = yrs[::3]; vd = vals[::3]
+        cfg = {"type":"line","data":{"labels":yd,"datasets":[{"label":"Smoothed Sunspot Number",
+               "data":vd,"borderColor":"#f39c12","backgroundColor":"rgba(243,156,18,0.08)",
+               "fill":True,"pointRadius":0,"borderWidth":1.2}]},
+               "options":{"title":_title("Solar Cycles 1–25 (1749–present) — 275 years, NOAA SWPC"),
+                          "legend":_legend(),"scales":_axes(x_label="Year",y_label="Sunspot No.")}}
+        out.append("### Solar Cycle History — 275 Years (1749–present)\n")
+        out.append(make_chart(cfg, 900, 260))
+        # Find peaks
+        peaks = []
+        for i in range(1, len(vals)-1):
+            if vals[i] > vals[i-1] and vals[i] > vals[i+1] and vals[i] > 80:
+                peaks.append((yrs[i], int(vals[i])))
+        out.append("\n**Solar Cycle Peaks — Pattern: ~11 years**\n")
+        out.append("| Cycle Peak Year | Max Sunspot # | Gap from prev |")
+        out.append("|----------------:|--------------:|--------------:|")
+        for i, (yr, ssn) in enumerate(peaks[-10:]):
+            gap = str(yr - peaks[i-1][0]) + " yrs" if i > 0 else "—"
+            out.append(f"| {yr} | {ssn} | {gap} |")
+        out.append(f"\n_Next solar maximum: **~2025 (Cycle 25)**. Next minimum: **~2030**._\n")
+
+    # ── 2. MAJOR EARTHQUAKES M8.0+ last 120 yrs (USGS) ──────────────────────
+    eq = get_json("https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minmagnitude=8.0&orderby=time&limit=50")
+    if eq and "features" in eq:
+        feats = eq["features"]
+        decades = {}
+        for f in feats:
+            yr  = datetime.utcfromtimestamp(f["properties"]["time"]/1000).year
+            dec = (yr//10)*10
+            decades[dec] = decades.get(dec,0) + 1
+        dl = sorted(decades); dc = [decades[d] for d in dl]
+        cfg2 = {"type":"bar","data":{"labels":[f"{d}s" for d in dl],
+                "datasets":[{"label":"M8.0+ Earthquakes per Decade","data":dc,
+                             "backgroundColor":"rgba(231,76,60,0.7)","borderColor":"#e74c3c","borderWidth":1}]},
+                "options":{"title":_title("M8.0+ Earthquakes by Decade (USGS — last ~120 years)"),
+                           "legend":_legend(),"scales":_axes(x_label="Decade",y_label="Count",y_min=0)}}
+        out.append("\n### Major Earthquake History — M8.0+ (USGS)\n")
+        out.append(make_chart(cfg2, 900, 240))
+        top = sorted(feats, key=lambda x: x["properties"]["mag"], reverse=True)[:8]
+        out.append("\n**Strongest on Record**\n")
+        out.append("| Mag | Location | Date |")
+        out.append("|----:|:---------|:-----|")
+        for f in top:
+            mag   = f["properties"]["mag"]
+            place = (f["properties"]["place"] or "Unknown")[:50]
+            t     = datetime.utcfromtimestamp(f["properties"]["time"]/1000).strftime("%Y-%m-%d")
+            out.append(f"| **{mag}** | {place} | {t} |")
+        out.append("")
+
+    # ── 3. GLOBAL TEMPERATURE 1880-present (NASA GISS) ───────────────────────
+    text = get_text("https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.csv")
+    if text:
+        csv_lines = text.strip().splitlines()
+        hi = next((i for i,l in enumerate(csv_lines) if l.startswith("Year")), None)
+        if hi is not None:
+            ay=[]; at=[]
+            for line in csv_lines[hi+1:]:
+                parts = line.split(",")
+                if len(parts)<14: continue
+                try:
+                    yr=int(parts[0]); jd=parts[13].strip()
+                    if jd not in ("","****","***"): ay.append(yr); at.append(round(float(jd),2))
+                except: pass
+            if len(ay) > 10:
+                colors=["#e74c3c" if t>0.5 else "#f39c12" if t>0 else "#3498db" for t in at]
+                cfg3={"type":"bar","data":{"labels":ay,"datasets":[{"label":"Temp Anomaly vs 1951–80 baseline (°C)",
+                      "data":at,"backgroundColor":colors,"borderWidth":0}]},
+                      "options":{"title":_title(f"Global Temperature Anomaly 1880–{ay[-1]} (145 yrs) — NASA GISS"),
+                                 "legend":_legend(),"scales":_axes(x_label="Year",y_label="°C anomaly")}}
+                out.append("\n### Global Temperature — 145 Years (1880–present) · NASA GISS\n")
+                out.append(make_chart(cfg3, 900, 280))
+                warming = round(at[-1]-at[0], 2)
+                hottest = ay[at.index(max(at))]
+                out.append(f"\n_Total warming since 1880: **+{warming}°C** · Hottest year on record: **{hottest}**_\n")
+                out.append("**30-Year Period Averages**\n")
+                out.append("| Period | Avg Anomaly | Trend |")
+                out.append("|:-------|------------:|:------|")
+                for s in range(1880, max(ay)-28, 30):
+                    e2=s+29
+                    vals=[t for y,t in zip(ay,at) if s<=y<=e2]
+                    if vals:
+                        avg=round(sum(vals)/len(vals),2)
+                        trend="Warming" if avg>0.3 else "Neutral" if avg>-0.1 else "Cool"
+                        out.append(f"| {s}–{e2} | {avg:+.2f}°C | {trend} |")
+                out.append("")
+
+    # ── 4. CO2 KEELING CURVE 1958-present (NOAA) ─────────────────────────────
+    co2t = get_text("https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_annmean_mlo.txt")
+    if co2t:
+        cy=[]; cv=[]
+        for line in co2t.splitlines():
+            if line.startswith("#") or not line.strip(): continue
+            parts=line.split()
+            if len(parts)>=2:
+                try:
+                    yr=int(parts[0]); val=float(parts[1])
+                    if yr>=1958: cy.append(yr); cv.append(val)
+                except: pass
+        if cy:
+            cfg4={"type":"line","data":{"labels":cy,"datasets":[{"label":"CO₂ ppm (Mauna Loa annual mean)",
+                  "data":cv,"borderColor":"#e67e22","backgroundColor":"rgba(230,126,34,0.1)",
+                  "fill":True,"pointRadius":0,"borderWidth":1.8}]},
+                  "options":{"title":_title(f"CO₂ Keeling Curve 1958–{cy[-1]} — NOAA Mauna Loa (65+ years)"),
+                             "legend":_legend(),"scales":_axes(x_label="Year",y_label="CO₂ (ppm)",y_min=310)}}
+            out.append("\n### CO₂ Keeling Curve — 65+ Years · NOAA Mauna Loa\n")
+            out.append(make_chart(cfg4, 900, 240))
+            rate=round((cv[-1]-cv[-10])/10,2) if len(cv)>=10 else "—"
+            out.append(f"\n_Current: **{cv[-1]} ppm** · 10-yr rise rate: **+{rate} ppm/yr** · Pre-industrial baseline: ~280 ppm_\n")
+
+    # ── 5. PATTERN PROBABILITY SUMMARY ───────────────────────────────────────
+    out.append("""
+### Pattern Probability Summary — What Might Repeat?
+
+| Signal | Historical Cycle | Last Major Event | Next Window | Confidence |
+|:-------|:----------------|:-----------------|:------------|:----------:|
+| Solar Maximum | ~11 years | 2014 (Cycle 24) | **2025** (Cycle 25) | High |
+| Solar Minimum | ~11 years | 2019–2020 | ~2030 | High |
+| M9.0+ Megaquake | ~20–30 yrs | 2011 Tōhoku | 2030–2045 | Medium |
+| M8.5+ Great Quake | ~10 yrs | 2010 Chile | ~2026–2030 | Medium |
+| Strong El Niño | ~5–7 yrs | 2023–2024 | ~2029–2031 | Medium |
+| Global temp record | Annual trend ↑ | 2024 | 2025–2026 | High |
+| CO₂ annual record | Every yr since 1958 | 2024 | 2025 | Very High |
+| Geomagnetic Storm G4+ | ~3–5 yrs | May 2024 | ~2027–2028 | Medium |
+| Major pandemic | ~10–100 yrs | 2020 COVID-19 | Unknown | Low-Medium |
+| Grand Solar Minimum | ~200 yrs | 1645–1715 (Maunder) | ~2100? | Low |
+
+_Based on historical recurrence rates — not deterministic predictions. Longer cycles = lower confidence._
+""")
+    if not out: return "_Historical pattern data unavailable_"
+    out.append("<sub>Sources: [NOAA SWPC](https://services.swpc.noaa.gov) · [USGS](https://earthquake.usgs.gov/fdsnws/event/1/) · [NASA GISS](https://data.giss.nasa.gov/gistemp) · [NOAA GML](https://gml.noaa.gov) — all free, no auth</sub>")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NOBEL PRIZE & SCIENTIST DATA · Nobel Prize API (free, no auth)
+# ══════════════════════════════════════════════════════════════════════════════
+def get_nobel_data():
+    recent = get_json("https://api.nobelprize.org/2.1/nobelPrizes?limit=10&sort=desc&format=json")
+    out = []
+    if recent and "nobelPrizes" in recent:
+        prizes = recent["nobelPrizes"]
+        out.append("#### Recent Nobel Prizes\n")
+        out.append("| Year | Category | Laureate(s) | Motivation |")
+        out.append("|-----:|:---------|:------------|:-----------|")
+        for p in prizes[:10]:
+            year = p.get("awardYear","—")
+            cat  = p.get("category",{}).get("en","—")
+            ll   = p.get("laureates",[])
+            names = " · ".join([(l.get("fullName",{}).get("en") or l.get("orgName",{}).get("en","—")) for l in ll[:2]])
+            if len(ll) > 2: names += f" +{len(ll)-2}"
+            motiv = (ll[0].get("motivation",{}).get("en","") if ll else "")[:55]
+            out.append(f"| {year} | {cat} | {names} | {motiv}... |")
+        out.append("")
+
+    cats = [("physics","Physics"),("chemistry","Chemistry"),("medicine","Medicine"),
+            ("literature","Literature"),("peace","Peace"),("economics","Economics")]
+    cat_counts = {}
+    for cat_id, cat_name in cats:
+        d = get_json(f"https://api.nobelprize.org/2.1/nobelPrizes?nobelPrizeCategory={cat_id}&format=json")
+        if d: cat_counts[cat_name] = d.get("meta",{}).get("count",0)
+
+    if cat_counts:
+        cfg={"type":"doughnut","data":{"labels":list(cat_counts.keys()),
+             "datasets":[{"data":list(cat_counts.values()),
+             "backgroundColor":["#3498db","#2ecc71","#e74c3c","#f39c12","#9b59b6","#1abc9c"],"borderWidth":1}]},
+             "options":{"title":_title("Nobel Prizes by Category (1901–present)"),"legend":_legend()}}
+        out.append(make_chart(cfg,500,300))
+        out.append("\n| Category | Total Prizes |")
+        out.append("|:---------|------------:|")
+        for cat_name, count in cat_counts.items():
+            out.append(f"| {cat_name} | {count} |")
+
+    if not out: return "_Nobel data unavailable_"
+    out.append("\n<sub>Source: [Nobel Prize API](https://api.nobelprize.org/2.1/) — official API, free, no auth</sub>")
+    return "\n".join(out)
 
 
 def main():
@@ -1623,7 +1856,6 @@ def main():
         ("WEATHER",      get_weather_global),
         ("TEMP",         get_temperature_trend),
         ("CO2_ATMO",     get_co2),
-        ("TICKER",       get_arxiv),
         ("FISHING",      get_fishing),
         ("CLIMATE",      get_co2_emissions),
         ("ENERGY",       get_renewable_energy),
@@ -1641,7 +1873,11 @@ def main():
         ("WIKI_TRENDS",  get_wikipedia_trending),
         ("APOD",         get_apod_visual),
         ("PROTEIN",      get_protein_visual),
-        ("API_REF",      get_api_reference),
+        # New sections
+        ("QUOTE",        get_quote_of_day),
+        ("ON_THIS_DAY",  get_on_this_day),
+        ("HISTORY",      get_historical_patterns),
+        ("NOBEL",        get_nobel_data),
     ]
 
     for tag, fn in steps:
@@ -1655,7 +1891,7 @@ def main():
 
     with open("README.md", "w", encoding="utf-8") as f:
         f.write(readme)
-    print("\nGlobal Satellite Signal Dashboard updated.")
+    print("\nGlobal Satellite Signal Dashboard updated successfully.")
 
 
 if __name__ == "__main__":
