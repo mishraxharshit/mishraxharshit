@@ -313,7 +313,7 @@
 
 ---
 
-## Complete Free Satellite & Data API Reference (42 APIs)
+## Complete Free Satellite & Data API Reference
 
 <!-- START_API_REF -->
 <!-- END_API_REF -->
