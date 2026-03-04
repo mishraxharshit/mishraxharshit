@@ -1,19 +1,5 @@
 <div align="center">
 
-# Global Satellite Signal Dashboard
-
-![Auto-Updated](https://img.shields.io/badge/Auto--Updated-Every%206hrs-0D1117?style=flat-square&logo=github-actions)
-![APIs](https://img.shields.io/badge/Live%20APIs-40%2B-0D1117?style=flat-square)
-![Satellites](https://img.shields.io/badge/Satellite%20Data-30%2B%20Sources-00c8ff?style=flat-square)
-![No Auth](https://img.shields.io/badge/Most%20APIs-Zero%20Auth-00ff9d?style=flat-square)
-
-<!-- START_TIME -->
-<!-- END_TIME -->
-
-</div>
-
----
-
 ## Space Weather · NOAA SWPC
 
 <!-- START_SPACE_WEATHER -->
