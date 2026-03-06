@@ -1,10 +1,19 @@
 """
-Global Signal Dashboard — update_readme.py
-==========================================
-Fetches live data from 20+ free public APIs and injects into README.md.
-Run: python update_readme.py
-Required env: NASA_API_KEY (optional, falls back to DEMO_KEY)
-All other APIs: zero auth required.
+GitHub Profile README — update_readme.py
+=========================================
+Auto-injects live data from free public APIs into README.md.
+Runs every 6 hours via GitHub Actions.
+
+Active sections (22 injections):
+  Space    → ISS position, space weather, near-earth objects
+  Earth    → earthquakes, CO₂, weather, flights
+  Science  → arXiv, APOD, on this day
+  World    → GDP, inflation, forex, disease
+  Satellite → CelesTrak, key sats, DONKI, EPIC, exoplanets, Mars rovers
+  Footer   → quote of the day
+
+All other functions preserved — add tags to README to re-enable.
+ENV: NASA_API_KEY (optional, falls back to DEMO_KEY)
 """
 
 import os, re, json, math, time, urllib.request, urllib.parse, xml.etree.ElementTree as ET
@@ -1835,49 +1844,35 @@ def main():
         readme = f.read()
 
     steps = [
-        ("TIME",         get_timestamp),
-        ("SPACE_WEATHER",get_space_weather),
-        ("ISS",          get_iss),
-        ("CELESTRAK",    get_celestrak),
-        ("SAT_PARAMS",   get_key_satellites),
-        ("DONKI",        get_donki),
-        ("EPIC",         get_epic),
-        ("FIRMS",        get_firms),
-        ("GIBS",         get_gibs),
-        ("POWER",        get_nasa_power),
-        ("ENLIL",        get_enlil),
-        ("MARS",         get_mars_rovers),
-        ("EXOPLANETS",   get_exoplanets),
-        ("SATDB",        get_satdb),
-        ("KEEPTRACK",    get_keeptrack),
-        ("TLE_SEARCH",   get_tle_search),
-        ("EARTHQUAKES",  get_earthquakes),
-        ("NEOS",         get_neos),
-        ("WEATHER",      get_weather_global),
-        ("TEMP",         get_temperature_trend),
-        ("CO2_ATMO",     get_co2),
-        ("FISHING",      get_fishing),
-        ("CLIMATE",      get_co2_emissions),
-        ("ENERGY",       get_renewable_energy),
-        ("GDP",          get_gdp_growth),
-        ("INFLATION",    get_inflation),
-        ("TRADE",        get_trade_balance),
-        ("POPULATION",   get_population),
-        ("LIFE_EXP",     get_life_expectancy),
-        ("DISEASE",      get_disease_stats),
-        ("FOREX",        get_forex),
-        ("FLIGHTS",      get_flight_traffic),
-        ("COUNTRY",      get_country_signals),
-        ("TICKER",       get_arxiv),
-        ("GITHUB",       get_github_trending),
-        ("WIKI_TRENDS",  get_wikipedia_trending),
-        ("APOD",         get_apod_visual),
-        ("PROTEIN",      get_protein_visual),
-        # New sections
-        ("QUOTE",        get_quote_of_day),
-        ("ON_THIS_DAY",  get_on_this_day),
-        ("HISTORY",      get_historical_patterns),
-        ("NOBEL",        get_nobel_data),
+        # ── Header ──────────────────────────────────────────────
+        ("TIME",          get_timestamp),
+        # ── 🛰 Space (visible by default) ───────────────────────
+        ("ISS",           get_iss),
+        ("SPACE_WEATHER", get_space_weather),
+        ("NEOS",          get_neos),
+        # ── 🌍 Earth (collapsed) ────────────────────────────────
+        ("EARTHQUAKES",   get_earthquakes),
+        ("CO2_ATMO",      get_co2),
+        ("WEATHER",       get_weather_global),
+        ("FLIGHTS",       get_flight_traffic),
+        # ── 🔬 Science (collapsed) ──────────────────────────────
+        ("TICKER",        get_arxiv),
+        ("APOD",          get_apod_visual),
+        ("ON_THIS_DAY",   get_on_this_day),
+        # ── 🌐 World (collapsed) ────────────────────────────────
+        ("GDP",           get_gdp_growth),
+        ("INFLATION",     get_inflation),
+        ("FOREX",         get_forex),
+        ("DISEASE",       get_disease_stats),
+        # ── 📡 Full Satellite Dashboard (collapsed) ─────────────
+        ("CELESTRAK",     get_celestrak),
+        ("SAT_PARAMS",    get_key_satellites),
+        ("DONKI",         get_donki),
+        ("EPIC",          get_epic),
+        ("EXOPLANETS",    get_exoplanets),
+        ("MARS",          get_mars_rovers),
+        # ── Footer ──────────────────────────────────────────────
+        ("QUOTE",         get_quote_of_day),
     ]
 
     for tag, fn in steps:
@@ -1891,7 +1886,7 @@ def main():
 
     with open("README.md", "w", encoding="utf-8") as f:
         f.write(readme)
-    print("\nGlobal Satellite Signal Dashboard updated successfully.")
+    print("\nProfile README updated.")
 
 
 if __name__ == "__main__":
