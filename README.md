@@ -2,7 +2,7 @@
 
 <br/>
 
-[![Research Data Dashboard](https://img.shields.io/badge/Research_Data_Dashboard-2dd4bf?style=for-the-badge&logo=googlesheets&logoColor=white)](https://mishraxharshit.github.io)
+[![Research Data Dashboard](https://img.shields.io/badge/Research_Data_Dashboard-2dd4bf?style=for-the-badge&logo=googlesheets&logoColor=white)](https://mishraxharshit.github.io/mishraxharshit)
 
 <br/>
 <br/>
