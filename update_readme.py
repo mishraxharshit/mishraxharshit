@@ -1,19 +1,10 @@
 """
-GitHub Profile README — update_readme.py
-=========================================
-Auto-injects live data from free public APIs into README.md.
-Runs every 6 hours via GitHub Actions.
-
-Active sections (22 injections):
-  Space    → ISS position, space weather, near-earth objects
-  Earth    → earthquakes, CO₂, weather, flights
-  Science  → arXiv, APOD, on this day
-  World    → GDP, inflation, forex, disease
-  Satellite → CelesTrak, key sats, DONKI, EPIC, exoplanets, Mars rovers
-  Footer   → quote of the day
-
-All other functions preserved — add tags to README to re-enable.
-ENV: NASA_API_KEY (optional, falls back to DEMO_KEY)
+Global Signal Dashboard — update_readme.py
+==========================================
+Fetches live data from 20+ free public APIs and injects into README.md.
+Run: python update_readme.py
+Required env: NASA_API_KEY (optional, falls back to DEMO_KEY)
+All other APIs: zero auth required.
 """
 
 import os, re, json, math, time, urllib.request, urllib.parse, xml.etree.ElementTree as ET
@@ -1839,39 +1830,39 @@ def get_nobel_data():
 
 
 def main():
+    """
+    Injects live data into README.md for mishraxharshit GitHub profile.
+    Active sections match the collapsible <details> blocks in README.md.
+    All 48 functions preserved — add a tag to README to re-enable any section.
+    """
     print("Loading README.md...")
     with open("README.md", "r", encoding="utf-8") as f:
         readme = f.read()
 
     steps = [
-        # ── Header ──────────────────────────────────────────────
+        # ── Header ──────────────────────────────────────
         ("TIME",          get_timestamp),
-        # ── 🛰 Space (visible by default) ───────────────────────
+        # ── Space (open by default) ─────────────────────
         ("ISS",           get_iss),
         ("SPACE_WEATHER", get_space_weather),
         ("NEOS",          get_neos),
-        # ── 🌍 Earth (collapsed) ────────────────────────────────
+        # ── Earth ───────────────────────────────────────
         ("EARTHQUAKES",   get_earthquakes),
         ("CO2_ATMO",      get_co2),
         ("WEATHER",       get_weather_global),
-        ("FLIGHTS",       get_flight_traffic),
-        # ── 🔬 Science (collapsed) ──────────────────────────────
+        # ── Research ────────────────────────────────────
         ("TICKER",        get_arxiv),
         ("APOD",          get_apod_visual),
         ("ON_THIS_DAY",   get_on_this_day),
-        # ── 🌐 World (collapsed) ────────────────────────────────
+        # ── Satellites ──────────────────────────────────
+        ("CELESTRAK",     get_celestrak),
+        ("DONKI",         get_donki),
+        ("EXOPLANETS",    get_exoplanets),
+        # ── World ───────────────────────────────────────
         ("GDP",           get_gdp_growth),
-        ("INFLATION",     get_inflation),
         ("FOREX",         get_forex),
         ("DISEASE",       get_disease_stats),
-        # ── 📡 Full Satellite Dashboard (collapsed) ─────────────
-        ("CELESTRAK",     get_celestrak),
-        ("SAT_PARAMS",    get_key_satellites),
-        ("DONKI",         get_donki),
-        ("EPIC",          get_epic),
-        ("EXOPLANETS",    get_exoplanets),
-        ("MARS",          get_mars_rovers),
-        # ── Footer ──────────────────────────────────────────────
+        # ── Footer ──────────────────────────────────────
         ("QUOTE",         get_quote_of_day),
     ]
 
@@ -1886,7 +1877,7 @@ def main():
 
     with open("README.md", "w", encoding="utf-8") as f:
         f.write(readme)
-    print("\nProfile README updated.")
+    print("\nProfile README updated — 17 live sections injected.")
 
 
 if __name__ == "__main__":
