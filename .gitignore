@@ -1,0 +1,33 @@
+# Environment
+.env
+*.env.local
+*.env.production
+
+# Node
+node_modules/
+.next/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Windows
+*:Zone.Identifier
+Thumbs.db
+desktop.ini
+
+# Mac
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>mishraxharshit — Research Intelligence Dashboards</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Lato:wght@300;400;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#ffffff;--bg:#f8f9fa;
+  --border:#e8eaed;--border2:#d1d5db;
+  --text:#1a1a2e;--text2:#4a5568;--text3:#9ca3af;
+  --red:#c0392b;--green:#27ae60;--blue:#2980b9;--orange:#e67e22;
+  --serif:'Source Serif 4',Georgia,serif;
+  --sans:'Lato',sans-serif;
+  --mono:'DM Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--text);font-family:var(--sans)}
+
+#topbar{background:var(--white);border-bottom:2px solid var(--text);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.tb-logo{font-family:var(--serif);font-size:18px;font-weight:700;letter-spacing:-.02em}
+.tb-logo span{font-weight:300;color:var(--text2)}
+.tb-live{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.08em;text-transform:uppercase}
+.tb-live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:ld 2s ease-in-out infinite}
+@keyframes ld{0%,100%{opacity:1}50%{opacity:.3}}
+
+.hero{max-width:900px;margin:0 auto;padding:60px 32px 40px}
+.hero h1{font-family:var(--serif);font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1.2;margin-bottom:16px}
+.hero p{font-family:var(--serif);font-size:16px;color:var(--text2);line-height:1.75;font-style:italic;max-width:640px;margin-bottom:32px}
+.hero-divider{border:none;border-top:1px solid var(--border);margin:0 0 40px}
+
+.cards{max-width:900px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:60px}
+.card{background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden;text-decoration:none;color:inherit;transition:all .15s;display:flex;flex-direction:column}
+.card:hover{box-shadow:0 4px 20px rgba(0,0,0,.09);transform:translateY(-2px)}
+.card-top{padding:24px 24px 0;border-top:3px solid var(--text)}
+.card-top.blue{border-top-color:var(--blue)}
+.card-top.green{border-top-color:var(--green)}
+.card-top.orange{border-top-color:var(--orange)}
+.card-icon{font-size:28px;margin-bottom:12px}
+.card-title{font-family:var(--serif);font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+.card-desc{font-family:var(--serif);font-size:13px;color:var(--text2);line-height:1.65;font-style:italic;margin-bottom:16px}
+.card-apis{padding:0 24px;flex:1}
+.api-pill{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;border:1px solid var(--border);color:var(--text2);margin:2px;background:var(--bg)}
+.card-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg)}
+.card-cta{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--blue);letter-spacing:.06em;text-transform:uppercase}
+.card-status{font-family:var(--mono);font-size:9px;color:var(--text3)}
+
+.bottom{max-width:900px;margin:0 auto;padding:0 32px 60px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.info-box{background:var(--white);border:1px solid var(--border);border-radius:4px;padding:24px}
+.info-box h3{font-family:var(--serif);font-size:17px;font-weight:600;margin-bottom:12px;letter-spacing:-.01em}
+.info-box p,ul{font-family:var(--serif);font-size:13px;color:var(--text2);line-height:1.7}
+.info-box ul{padding-left:18px}
+.info-box li{margin-bottom:4px}
+
+footer{background:var(--white);border-top:1px solid var(--border);padding:20px 32px;display:flex;align-items:center;justify-content:space-between}
+footer span{font-family:var(--mono);font-size:10px;color:var(--text3)}
+footer a{color:var(--blue);text-decoration:none}
+
+@media(max-width:800px){.cards{grid-template-columns:1fr}.bottom{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="tb-logo">mishraxharshit <span>/ Intelligence Dashboards</span></div>
+  <div class="tb-live"><div class="tb-live-dot"></div>Live · 40+ APIs</div>
+</div>
+
+<div class="hero">
+  <h1>Three dashboards.<br>One planet's worth of data.</h1>
+  <p>Open-source, evidence-first dashboards built on 40+ free public APIs. Real data from NOAA, NASA, USGS, World Bank, WHO, ECB, and more. No agenda. No paywalls. Updated live.</p>
+  <hr class="hero-divider">
+</div>
+
+<div class="cards">
+
+  <a class="card" href="signal_intelligence.html">
+    <div class="card-top orange">
+      <div class="card-icon">📡</div>
+      <div class="card-title">Signal Intelligence</div>
+      <div class="card-desc">Probabilistic live predictions from real-time data. Bayesian inference, Poisson processes, Z-score anomaly detection — every algorithm shown.</div>
+    </div>
+    <div class="card-apis">
+      <span class="api-pill">Bayesian</span><span class="api-pill">Gutenberg-Richter</span><span class="api-pill">Omori-Utsu</span>
+      <span class="api-pill">Poisson</span><span class="api-pill">Z-score</span><span class="api-pill">OLS regression</span>
+      <span class="api-pill">Torino Scale</span><span class="api-pill">NOAA SWPC</span><span class="api-pill">USGS</span>
+      <span class="api-pill">NASA NeoWs</span><span class="api-pill">OpenAQ</span><span class="api-pill">World Bank</span>
+    </div>
+    <div class="card-foot">
+      <div class="card-cta">Open →</div>
+      <div class="card-status">8 domains · 36+ predictions · live</div>
+    </div>
+  </a>
+
+  <a class="card" href="worlddata.html">
+    <div class="card-top green">
+      <div class="card-icon">🌍</div>
+      <div class="card-title">World Progress</div>
+      <div class="card-desc">Evidence-based view of humanity's progress on poverty, health, climate, education, energy. Hans Rosling approach — honest about both progress and problems.</div>
+    </div>
+    <div class="card-apis">
+      <span class="api-pill">World Bank</span><span class="api-pill">WHO GHO</span><span class="api-pill">NOAA GML</span>
+      <span class="api-pill">NASA GISS</span><span class="api-pill">FAO</span><span class="api-pill">UN Population</span>
+      <span class="api-pill">IRENA</span><span class="api-pill">UNESCO</span><span class="api-pill">ECB</span>
+    </div>
+    <div class="card-foot">
+      <div class="card-cta">Open →</div>
+      <div class="card-status">8 sections · long-run trends · live</div>
+    </div>
+  </a>
+
+  <a class="card" href="earth_intelligence.html">
+    <div class="card-top blue">
+      <div class="card-icon">🛰</div>
+      <div class="card-title">Earth Intelligence</div>
+      <div class="card-desc">Live planet data — ISS tracking, earthquakes, space weather, biodiversity, ocean data, research papers, live flights. 40+ APIs, 30+ charts.</div>
+    </div>
+    <div class="card-apis">
+      <span class="api-pill">wheretheiss.at</span><span class="api-pill">CelesTrak</span><span class="api-pill">USGS</span>
+      <span class="api-pill">OpenSky ADS-B</span><span class="api-pill">GBIF</span><span class="api-pill">iNaturalist</span>
+      <span class="api-pill">arXiv</span><span class="api-pill">PubMed</span><span class="api-pill">OpenAlex</span>
+      <span class="api-pill">disease.sh</span><span class="api-pill">Open-Meteo</span><span class="api-pill">Nobel API</span>
+    </div>
+    <div class="card-foot">
+      <div class="card-cta">Open →</div>
+      <div class="card-status">17 sections · 40+ APIs · live</div>
+    </div>
+  </a>
+
+</div>
+
+<div class="bottom">
+  <div class="info-box">
+    <h3>Data principles</h3>
+    <ul>
+      <li>Primary sources only — no aggregators, no scrapers</li>
+      <li>Every number has a source citation on the chart</li>
+      <li>Limitations and measurement gaps explicitly noted</li>
+      <li>Scientific consensus stated clearly (climate, health)</li>
+      <li>Predictions show algorithm and confidence interval</li>
+      <li>No commercial interests, no advertising</li>
+    </ul>
+  </div>
+  <div class="info-box">
+    <h3>APIs used (free, no auth)</h3>
+    <p>NOAA GML · NOAA SWPC · NASA GISS · NASA NeoWs · NASA DONKI · NASA APOD · USGS Earthquakes · World Bank · WHO GHO · OpenAQ · Open-Meteo · OpenSky Network · GBIF · iNaturalist · CelesTrak · arXiv · PubMed NCBI · OpenAlex · Nobel Prize · disease.sh · Frankfurter ECB · Exoplanet Archive · wheretheiss.at · Open Notify</p>
+  </div>
+</div>
+
+<footer>
+  <span>mishraxharshit · GitHub Pages · All data public domain</span>
+  <span>Built with Claude · <a href="https://github.com/mishraxharshit">github.com/mishraxharshit</a></span>
+</footer>
+
+</body>
+</html>
